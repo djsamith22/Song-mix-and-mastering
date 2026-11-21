@@ -45,6 +45,7 @@ data class SwaraUiState(
     val eqCurveDb: List<Float> = emptyList(),
     val bandTelemetry: List<com.example.audio.BandTelemetry> = emptyList(),
     val params: MasteringParams = MASTERING_PRESETS.first().params,
+    val songRecommendedParams: MasteringParams? = null,
     val activePresetId: String? = MASTERING_PRESETS.first().id,
     val auditMetrics: DiagnosticMetrics? = null,
     val bannerMessage: String? = null,
@@ -113,15 +114,23 @@ class SwaraViewModel(application: Application) : AndroidViewModel(application) {
             }
             try {
                 val decoded = AudioFileCodec.decodeAudioUri(context, uri)
-                val (peaks, audit) = withContext(Dispatchers.Default) {
+                val (peaks, auditAndRec) = withContext(Dispatchers.Default) {
                     val p = AudioAuditEngine.extractWaveformPeaks(decoded, 140)
-                    val a = AudioAuditEngine.runAudit(decoded)
-                    p to a
+                    val ar = AudioAuditEngine.analyzeSongAndRecommend(decoded)
+                    p to ar
                 }
+                val (audit, recommended) = auditAndRec
                 loadedAudio = decoded
                 playbackEngine.load(decoded)
-                playbackEngine.updateParams(_uiState.value.params)
+                playbackEngine.updateParams(recommended)
                 playbackEngine.setBypassed(_uiState.value.isBypassed)
+
+                val strings = studioStrings(_uiState.value.language)
+                val (curve, staticTelemetry) = com.example.audio.MasteringDspChain.computeStaticCurveAndTelemetry(
+                    params = recommended,
+                    sampleRate = decoded.sampleRate,
+                    isBypassed = _uiState.value.isBypassed
+                )
 
                 _uiState.update {
                     it.copy(
@@ -132,7 +141,13 @@ class SwaraViewModel(application: Application) : AndroidViewModel(application) {
                         durationSec = decoded.durationSec,
                         waveformPeaks = peaks,
                         auditMetrics = audit,
-                        bannerMessage = null
+                        params = recommended,
+                        songRecommendedParams = recommended,
+                        activePresetId = "auto",
+                        eqCurveDb = curve,
+                        bandTelemetry = staticTelemetry,
+                        bannerMessage = strings.autoFitAppliedBanner,
+                        isBannerError = false
                     )
                 }
             } catch (e: CancellationException) {
@@ -195,6 +210,27 @@ class SwaraViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
+    fun applySongAutoMatch() {
+        val recommended = _uiState.value.songRecommendedParams ?: return
+        playbackEngine.updateParams(recommended)
+        val strings = studioStrings(_uiState.value.language)
+        _uiState.update { state ->
+            val (curve, staticTelemetry) = com.example.audio.MasteringDspChain.computeStaticCurveAndTelemetry(
+                params = recommended,
+                sampleRate = loadedAudio?.sampleRate ?: 44100,
+                isBypassed = state.isBypassed
+            )
+            state.copy(
+                params = recommended,
+                activePresetId = "auto",
+                eqCurveDb = curve,
+                bandTelemetry = if (state.isPlaying) state.bandTelemetry else staticTelemetry,
+                bannerMessage = strings.autoFitAppliedBanner,
+                isBannerError = false
+            )
+        }
+    }
+
     fun updateParams(transform: (MasteringParams) -> MasteringParams) {
         _uiState.update { state ->
             val updated = transform(state.params)
@@ -204,9 +240,13 @@ class SwaraViewModel(application: Application) : AndroidViewModel(application) {
                 sampleRate = loadedAudio?.sampleRate ?: 44100,
                 isBypassed = state.isBypassed
             )
+            val presetId = when {
+                state.songRecommendedParams != null && updated == state.songRecommendedParams -> "auto"
+                else -> MASTERING_PRESETS.firstOrNull { it.params == updated }?.id
+            }
             state.copy(
                 params = updated,
-                activePresetId = MASTERING_PRESETS.firstOrNull { it.params == updated }?.id,
+                activePresetId = presetId,
                 eqCurveDb = curve,
                 bandTelemetry = if (state.isPlaying) state.bandTelemetry else staticTelemetry
             )

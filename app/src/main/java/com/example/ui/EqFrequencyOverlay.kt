@@ -164,7 +164,14 @@ fun EqFrequencyOverlay(
                 .semantics { contentDescription = "Interactive Parametric Repair EQ frequency and gain reduction overlay" }
                 .pointerInput(params) {
                     detectTapGestures { tapOffset ->
-                        val bandFreqs = floatArrayOf(params.hpf, 90f, 250f, 3200f, 6800f, 11000f)
+                        val bandFreqs = floatArrayOf(
+                            params.hpf,
+                            params.lowFreq,
+                            params.mudFreq,
+                            params.presFreq,
+                            params.deessFreq,
+                            params.airFreq
+                        )
                         var nearest = 0
                         var minDist = Float.MAX_VALUE
                         for (i in bandFreqs.indices) {
@@ -185,7 +192,14 @@ fun EqFrequencyOverlay(
                             val freqs = if (bandTelemetry.size == 6) {
                                 bandTelemetry.map { it.freqHz }
                             } else {
-                                listOf(params.hpf, 90f, 250f, 3200f, 6800f, 11000f)
+                                listOf(
+                                    params.hpf,
+                                    params.lowFreq,
+                                    params.mudFreq,
+                                    params.presFreq,
+                                    params.deessFreq,
+                                    params.airFreq
+                                )
                             }
                             var nearest = 0
                             var minDist = Float.MAX_VALUE
@@ -204,31 +218,37 @@ fun EqFrequencyOverlay(
                             val w = size.width.toFloat()
                             val h = size.height.toFloat()
                             val pos = change.position
+                            val dragFreq = xToFreq(pos.x, w)
                             when (selectedBand) {
                                 0 -> {
-                                    val newFreq = xToFreq(pos.x, w).coerceIn(20f, 90f)
-                                    val snapped = ((newFreq / 2f).roundToInt() * 2f).coerceIn(20f, 90f)
+                                    val clamped = dragFreq.coerceIn(20f, 250f)
+                                    val snapped = ((clamped / 2f).roundToInt() * 2f).coerceIn(20f, 250f)
                                     onUpdateParams { it.copy(hpf = snapped) }
                                 }
                                 1 -> {
                                     val db = snapDb(yToDb(pos.y, h), -6f, 6f)
-                                    onUpdateParams { it.copy(low = db) }
+                                    val hz = dragFreq.roundToInt().coerceIn(40, 300).toFloat()
+                                    onUpdateParams { it.copy(low = db, lowFreq = hz) }
                                 }
                                 2 -> {
                                     val db = snapDb(yToDb(pos.y, h), -6f, 4f)
-                                    onUpdateParams { it.copy(mud = db) }
+                                    val hz = dragFreq.roundToInt().coerceIn(120, 1000).toFloat()
+                                    onUpdateParams { it.copy(mud = db, mudFreq = hz) }
                                 }
                                 3 -> {
                                     val db = snapDb(yToDb(pos.y, h), -4f, 6f)
-                                    onUpdateParams { it.copy(pres = db) }
+                                    val hz = dragFreq.roundToInt().coerceIn(800, 8000).toFloat()
+                                    onUpdateParams { it.copy(pres = db, presFreq = hz) }
                                 }
                                 4 -> {
                                     val db = snapDb(yToDb(pos.y, h), -6f, 3f)
-                                    onUpdateParams { it.copy(deess = db) }
+                                    val hz = dragFreq.roundToInt().coerceIn(2500, 14000).toFloat()
+                                    onUpdateParams { it.copy(deess = db, deessFreq = hz) }
                                 }
                                 5 -> {
                                     val db = snapDb(yToDb(pos.y, h), -4f, 6f)
-                                    onUpdateParams { it.copy(air = db) }
+                                    val hz = dragFreq.roundToInt().coerceIn(6000, 18000).toFloat()
+                                    onUpdateParams { it.copy(air = db, airFreq = hz) }
                                 }
                             }
                         }
@@ -356,11 +376,11 @@ fun EqFrequencyOverlay(
             // 4. Six Interactive EQ Control Nodes
             val nodePositions = listOf(
                 Pair(0, params.hpf.toDouble() to (bandTelemetry.getOrNull(0)?.eqGainDb ?: -3f)),
-                Pair(1, 90.0 to params.low),
-                Pair(2, 250.0 to params.mud),
-                Pair(3, 3200.0 to params.pres),
-                Pair(4, 6800.0 to params.deess),
-                Pair(5, 11000.0 to params.air)
+                Pair(1, params.lowFreq.toDouble() to params.low),
+                Pair(2, params.mudFreq.toDouble() to params.mud),
+                Pair(3, params.presFreq.toDouble() to params.pres),
+                Pair(4, params.deessFreq.toDouble() to params.deess),
+                Pair(5, params.airFreq.toDouble() to params.air)
             )
             nodePositions.forEach { (idx, freqAndDb) ->
                 val nx = freqToX(freqAndDb.first, w)
@@ -431,6 +451,14 @@ fun EqFrequencyOverlay(
                 }
             }
         }
+
+        // Manual Hz frequency input boxes directly below the interactive EQ overlay
+        EqBandFrequencyInputs(
+            params = params,
+            selectedBand = selectedBand,
+            onSelectBand = { selectedBand = it },
+            onUpdateParams = onUpdateParams
+        )
     }
 }
 

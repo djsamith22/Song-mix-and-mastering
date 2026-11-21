@@ -52,6 +52,7 @@ class MainActivity : ComponentActivity() {
                     onSelectBypass = vm::setBypass,
                     onSeekFraction = vm::seekFraction,
                     onSelectPreset = vm::selectPreset,
+                    onAutoFitSong = vm::applySongAutoMatch,
                     onUpdateParams = vm::updateParams,
                     onExportWavClick = {
                         createWavLauncher.launch(vm.suggestedExportFileName())

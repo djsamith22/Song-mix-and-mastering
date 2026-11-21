@@ -85,19 +85,26 @@ class MasteringDspChain(
     }
 
     private fun applyFilterCoeffs(p: MasteringParams) {
-        hpf.configure(freqHz = p.hpf.toDouble(), q = 0.70710678)
-        low.configure(freqHz = 90.0, q = 0.70710678, gainDb = p.low.toDouble())
-        mud.configure(freqHz = 250.0, q = 1.4, gainDb = p.mud.toDouble())
-        pres.configure(freqHz = 3200.0, q = 1.2, gainDb = p.pres.toDouble())
-        deess.configure(freqHz = 6800.0, q = 2.2, gainDb = p.deess.toDouble())
-        air.configure(freqHz = 11000.0, q = 0.70710678, gainDb = p.air.toDouble())
+        val hpfHz = p.hpf.toDouble().coerceIn(20.0, 250.0)
+        val lowHz = p.lowFreq.toDouble().coerceIn(40.0, 300.0)
+        val mudHz = p.mudFreq.toDouble().coerceIn(120.0, 1000.0)
+        val presHz = p.presFreq.toDouble().coerceIn(800.0, 8000.0)
+        val deessHz = p.deessFreq.toDouble().coerceIn(2500.0, 14000.0)
+        val airHz = p.airFreq.toDouble().coerceIn(6000.0, 18000.0)
 
-        bandProbes[0].configure(freqHz = p.hpf.toDouble().coerceAtLeast(24.0), q = 1.0)
-        bandProbes[1].configure(freqHz = 90.0, q = 1.2)
-        bandProbes[2].configure(freqHz = 250.0, q = 1.4)
-        bandProbes[3].configure(freqHz = 3200.0, q = 1.2)
-        bandProbes[4].configure(freqHz = 6800.0, q = 2.0)
-        bandProbes[5].configure(freqHz = 11000.0, q = 1.2)
+        hpf.configure(freqHz = hpfHz, q = 0.70710678)
+        low.configure(freqHz = lowHz, q = 0.70710678, gainDb = p.low.toDouble())
+        mud.configure(freqHz = mudHz, q = 1.4, gainDb = p.mud.toDouble())
+        pres.configure(freqHz = presHz, q = 1.2, gainDb = p.pres.toDouble())
+        deess.configure(freqHz = deessHz, q = 2.2, gainDb = p.deess.toDouble())
+        air.configure(freqHz = airHz, q = 0.70710678, gainDb = p.air.toDouble())
+
+        bandProbes[0].configure(freqHz = hpfHz.coerceAtLeast(24.0), q = 1.0)
+        bandProbes[1].configure(freqHz = lowHz, q = 1.2)
+        bandProbes[2].configure(freqHz = mudHz, q = 1.4)
+        bandProbes[3].configure(freqHz = presHz, q = 1.2)
+        bandProbes[4].configure(freqHz = deessHz, q = 2.0)
+        bandProbes[5].configure(freqHz = airHz, q = 1.2)
     }
 
     private fun computeCompressorGainDb(inputLevelDb: Double, threshDb: Double, ratio: Double, kneeDb: Double): Double {
@@ -262,11 +269,11 @@ class MasteringDspChain(
         val p = currentParams
         val bandSpecs = listOf(
             Triple(0, "HPF", p.hpf),
-            Triple(1, "90Hz", 90f),
-            Triple(2, "250Hz", 250f),
-            Triple(3, "3.2k", 3200f),
-            Triple(4, "6.8k", 6800f),
-            Triple(5, "11k", 11000f)
+            Triple(1, formatShortFreq(p.lowFreq), p.lowFreq),
+            Triple(2, formatShortFreq(p.mudFreq), p.mudFreq),
+            Triple(3, formatShortFreq(p.presFreq), p.presFreq),
+            Triple(4, formatShortFreq(p.deessFreq), p.deessFreq),
+            Triple(5, formatShortFreq(p.airFreq), p.airFreq)
         )
         val totalDynGr = if (isBypassed || !isPlaying) 0f else (lastGainReductionDb + lastLimiterGrDb)
 
@@ -328,6 +335,16 @@ class MasteringDspChain(
             }
             val telemetry = chain.currentBandTelemetry(isBypassed = isBypassed, isPlaying = false)
             return curve to telemetry
+        }
+
+        private fun formatShortFreq(freqHz: Float): String {
+            val hz = freqHz.toInt()
+            return if (hz < 1000) {
+                "${hz}Hz"
+            } else {
+                val khz = hz / 1000.0
+                if (hz % 1000 == 0) "${hz / 1000}k" else String.format("%.1fk", khz)
+            }
         }
     }
 }

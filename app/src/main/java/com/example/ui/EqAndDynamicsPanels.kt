@@ -165,14 +165,14 @@ fun ParametricEqPanel(
             label = strings.hpfLabel,
             valueText = formatBandValueWithGr("${params.hpf.roundToInt()} Hz", bandTelemetry.getOrNull(0), isBypassed),
             value = params.hpf,
-            valueRange = 20f..90f,
+            valueRange = 20f..250f,
             step = 2f,
             testTag = "slider_hpf",
             onValueChange = { v -> onUpdateParams { it.copy(hpf = v) } }
         )
 
         StudioSliderRow(
-            label = strings.lowLabel,
+            label = formatBandTitleWithFreq(strings.lowLabel, params.lowFreq),
             valueText = formatBandValueWithGr(formatSignedDb(params.low), bandTelemetry.getOrNull(1), isBypassed),
             value = params.low,
             valueRange = -6f..6f,
@@ -182,7 +182,7 @@ fun ParametricEqPanel(
         )
 
         StudioSliderRow(
-            label = strings.mudLabel,
+            label = formatBandTitleWithFreq(strings.mudLabel, params.mudFreq),
             valueText = formatBandValueWithGr(formatSignedDb(params.mud), bandTelemetry.getOrNull(2), isBypassed),
             value = params.mud,
             valueRange = -6f..4f,
@@ -192,7 +192,7 @@ fun ParametricEqPanel(
         )
 
         StudioSliderRow(
-            label = strings.presLabel,
+            label = formatBandTitleWithFreq(strings.presLabel, params.presFreq),
             valueText = formatBandValueWithGr(formatSignedDb(params.pres), bandTelemetry.getOrNull(3), isBypassed),
             value = params.pres,
             valueRange = -4f..6f,
@@ -202,7 +202,7 @@ fun ParametricEqPanel(
         )
 
         StudioSliderRow(
-            label = strings.deessLabel,
+            label = formatBandTitleWithFreq(strings.deessLabel, params.deessFreq),
             valueText = formatBandValueWithGr(formatSignedDb(params.deess), bandTelemetry.getOrNull(4), isBypassed),
             value = params.deess,
             valueRange = -6f..3f,
@@ -212,7 +212,7 @@ fun ParametricEqPanel(
         )
 
         StudioSliderRow(
-            label = strings.airLabel,
+            label = formatBandTitleWithFreq(strings.airLabel, params.airFreq),
             valueText = formatBandValueWithGr(formatSignedDb(params.air), bandTelemetry.getOrNull(5), isBypassed),
             value = params.air,
             valueRange = -4f..6f,
@@ -416,6 +416,19 @@ private fun formatSignedDb(value: Float): String {
     val clean = if (value > -0.05f && value < 0.05f) 0.0f else value
     val sign = if (clean >= 0f) "+" else ""
     return String.format("%s%.1f dB", sign, clean)
+}
+
+private fun formatBandTitleWithFreq(templateLabel: String, freqHz: Float): String {
+    val base = templateLabel.substringBefore(" (")
+    val hz = freqHz.roundToInt()
+    val freqLabel = if (hz < 1000) {
+        "$hz Hz"
+    } else if (hz % 1000 == 0) {
+        "${hz / 1000} kHz"
+    } else {
+        String.format("%.1f kHz", hz / 1000.0)
+    }
+    return "$base ($freqLabel)"
 }
 
 private fun formatBandValueWithGr(

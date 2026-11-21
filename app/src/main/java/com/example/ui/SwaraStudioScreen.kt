@@ -77,6 +77,7 @@ fun SwaraStudioScreen(
     onSelectBypass: (Boolean) -> Unit,
     onSeekFraction: (Float) -> Unit,
     onSelectPreset: (MasteringPreset) -> Unit,
+    onAutoFitSong: () -> Unit,
     onUpdateParams: ((MasteringParams) -> MasteringParams) -> Unit,
     onExportWavClick: () -> Unit,
     onDismissBanner: () -> Unit,
@@ -237,6 +238,16 @@ fun SwaraStudioScreen(
                     PresetBar(
                         activePresetId = state.activePresetId,
                         onSelectPreset = onSelectPreset
+                    )
+
+                    // Song Tone Sculptor (Bass / Vocal / Treble) + Song-Adaptive Auto-Fit
+                    QuickTonePanel(
+                        strings = strings,
+                        params = state.params,
+                        isAudioLoaded = state.isAudioLoaded,
+                        isAutoMatchActive = state.activePresetId == "auto",
+                        onAutoFitClick = onAutoFitSong,
+                        onUpdateParams = onUpdateParams
                     )
 
                     // EQ & Dynamics Controls

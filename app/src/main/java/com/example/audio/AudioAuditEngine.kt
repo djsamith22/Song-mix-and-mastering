@@ -134,4 +134,98 @@ object AudioAuditEngine {
             issues = issues
         )
     }
+
+    /**
+     * Analyzes the song's spectral balance (sub, bass, mud, vocal, sibilance, treble) and crest
+     * factor to synthesize tailored MasteringParams (Bass, Vocal, Treble, Dynamics) for that song.
+     */
+    fun analyzeSongAndRecommend(audio: DecodedAudio): Pair<DiagnosticMetrics, MasteringParams> {
+        val metrics = runAudit(audio)
+        val ch = audio.channelCount
+        val samples = audio.interleavedSamples
+        val frames = audio.totalFrames
+        val sr = audio.sampleRate
+
+        val subDb = measureBandDb(samples, ch, frames, sr, 42.0, 0.8)
+        val bassDb = measureBandDb(samples, ch, frames, sr, 88.0, 0.9)
+        val mudDb = measureBandDb(samples, ch, frames, sr, 250.0, 1.2)
+        val vocDb = measureBandDb(samples, ch, frames, sr, 3200.0, 1.0)
+        val harshDb = measureBandDb(samples, ch, frames, sr, 6800.0, 1.5)
+        val airDb = measureBandDb(samples, ch, frames, sr, 11500.0, 0.8)
+
+        val rmsDb = metrics.rmsDb
+        val peakDb = metrics.peakDb
+        val crestDb = (peakDb - rmsDb).coerceAtLeast(3.0)
+
+        fun snapStep(value: Double, minV: Double, maxV: Double, step: Double): Float {
+            val clamped = value.coerceIn(minV, maxV)
+            val steps = kotlin.math.round(clamped / step)
+            return (steps * step).coerceIn(minV, maxV).toFloat()
+        }
+
+        // Sub rumble -> tight HPF
+        val recHpf = when {
+            subDb > rmsDb - 6.5 -> 44f
+            subDb > rmsDb - 10.0 -> 36f
+            else -> 28f
+        }
+
+        // Bass warmth target ~ (rmsDb - 5.0)
+        val recBass = snapStep((rmsDb - 5.0 - bassDb) * 0.55, -3.6, 4.2, 0.2)
+
+        // Low-mid mud cut relative to vocal energy
+        val mudExcess = mudDb - vocDb - 2.0
+        val recMud = if (mudExcess > 0.0) {
+            snapStep(-0.8 - mudExcess * 0.45, -4.8, 0.0, 0.2)
+        } else {
+            snapStep(-0.6, -4.8, 0.0, 0.2)
+        }
+
+        // Vocal presence target ~ (rmsDb - 8.5)
+        val recVocal = snapStep((rmsDb - 8.5 - vocDb) * 0.55, -1.2, 4.4, 0.2)
+
+        // Sibilance control relative to vocal
+        val sibilanceExcess = harshDb - vocDb + 4.5
+        val recDeess = if (sibilanceExcess > 0.0) {
+            snapStep(-1.0 - sibilanceExcess * 0.45, -4.6, -0.4, 0.2)
+        } else {
+            -1.0f
+        }
+
+        // Treble / Studio Air target ~ (rmsDb - 14.5)
+        val recTreble = snapStep((rmsDb - 14.5 - airDb) * 0.50, -1.8, 3.8, 0.2)
+
+        // Dynamics tailored to crest factor & headroom
+        val recThresh = when {
+            crestDb > 13.0 -> -18f
+            crestDb > 9.5 -> -15f
+            else -> -11f
+        }
+        val recRatio = when {
+            crestDb > 13.0 -> 3.0f
+            crestDb > 9.5 -> 2.6f
+            else -> 1.8f
+        }
+        val recGain = snapStep((-11.5 - rmsDb) * 0.35, -1.0, 3.2, 0.2)
+
+        val recommended = MasteringParams(
+            hpf = recHpf,
+            low = recBass,
+            lowFreq = 90f,
+            mud = recMud,
+            mudFreq = 250f,
+            pres = recVocal,
+            presFreq = 3200f,
+            deess = recDeess,
+            deessFreq = 6800f,
+            air = recTreble,
+            airFreq = 11000f,
+            thresh = recThresh,
+            ratio = recRatio,
+            width = 1.08f,
+            gain = recGain
+        )
+
+        return metrics to recommended
+    }
 }

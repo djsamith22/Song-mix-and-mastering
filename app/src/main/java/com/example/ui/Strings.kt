@@ -61,7 +61,18 @@ data class StudioStrings(
     val lyricsClearBtn: String,
     val lyricsApiConnectedBadge: String,
     val lyricsAutoApplyLabel: String,
-    val lyricsRestoreOriginalBtn: String
+    val lyricsRestoreOriginalBtn: String,
+    // Song-Adaptive Tone Shaper (Bass / Vocal / Treble)
+    val toneShaperTitle: String,
+    val toneShaperSubtitle: String,
+    val bassSliderLabel: String,
+    val vocalSliderLabel: String,
+    val trebleSliderLabel: String,
+    val autoFitSongBtn: String,
+    val deepBassBtn: String,
+    val vocalBoostBtn: String,
+    val brightTrebleBtn: String,
+    val autoFitAppliedBanner: String
 )
 
 fun studioStrings(lang: AppLanguage): StudioStrings = when (lang) {
@@ -121,7 +132,17 @@ fun studioStrings(lang: AppLanguage): StudioStrings = when (lang) {
         lyricsClearBtn = "Clear",
         lyricsApiConnectedBadge = "Gemini AI API සම්බන්ධයි",
         lyricsAutoApplyLabel = "නිවැරදි කළ වහාම Editor වෙත යොදන්න",
-        lyricsRestoreOriginalBtn = "මුල් පදවැල ගන්න"
+        lyricsRestoreOriginalBtn = "මුල් පදවැල ගන්න",
+        toneShaperTitle = "Song Tone Sculptor (Bass · Vocal · Treble)",
+        toneShaperSubtitle = "ගීතයේ සංඛ්‍යාත පරීක්ෂා කර ස්වයංක්‍රීයව සකස් කර ඇත — ඔබට අවශ්‍ය පරිදි Bass, Vocal සහ Treble වෙනස් කළ හැක.",
+        bassSliderLabel = "Bass (බේස්)",
+        vocalSliderLabel = "Vocal (ගායන හඬ)",
+        trebleSliderLabel = "Treble (ට්‍රෙබල් / Clarity)",
+        autoFitSongBtn = "ගීතයට ගැලපෙන Auto-Fit",
+        deepBassBtn = "Bass වැඩි",
+        vocalBoostBtn = "Vocal පැහැදිලි",
+        brightTrebleBtn = "Treble වැඩි",
+        autoFitAppliedBanner = "ගීතයේ ශබ්ද රටාවට ගැලපෙන Bass, Vocal සහ Treble ස්වයංක්‍රීයව සකස් කරන ලදී."
     )
 
     AppLanguage.EN -> StudioStrings(
@@ -180,7 +201,17 @@ fun studioStrings(lang: AppLanguage): StudioStrings = when (lang) {
         lyricsClearBtn = "Clear",
         lyricsApiConnectedBadge = "Gemini AI API Connected",
         lyricsAutoApplyLabel = "Auto-apply to editor",
-        lyricsRestoreOriginalBtn = "Restore Original"
+        lyricsRestoreOriginalBtn = "Restore Original",
+        toneShaperTitle = "Song Tone Sculptor (Bass · Vocal · Treble)",
+        toneShaperSubtitle = "Automatically tuned to your song's frequency profile—fine-tune Bass, Vocal, and Treble anytime.",
+        bassSliderLabel = "Bass",
+        vocalSliderLabel = "Vocal",
+        trebleSliderLabel = "Treble / Air",
+        autoFitSongBtn = "Auto-Fit to Song",
+        deepBassBtn = "Deep Bass",
+        vocalBoostBtn = "Vocal Boost",
+        brightTrebleBtn = "Bright Treble",
+        autoFitAppliedBanner = "Auto-tuned Bass, Vocal, Treble, and Dynamics to match this song."
     )
 }
 

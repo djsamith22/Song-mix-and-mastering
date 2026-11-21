@@ -114,6 +114,42 @@
     <!-- Presets -->
     <section id="presetBar" class="bg-[#111722] border border-slate-800 rounded-xl p-4 flex flex-wrap items-center gap-2"></section>
 
+    <!-- Song Tone Sculptor (Bass · Vocal · Treble) + Auto-Fit -->
+    <section class="bg-[#111722] border border-slate-800 rounded-xl p-5 space-y-4">
+      <div class="border-b border-slate-800 pb-2.5">
+        <h2 id="toneShaperTitle" class="text-base font-semibold text-slate-100">Song Tone Sculptor (Bass · Vocal · Treble)</h2>
+        <p id="toneShaperSubtitle" class="text-xs text-slate-400 mt-1">ගීතයේ සංඛ්‍යාත පරීක්ෂා කර ස්වයංක්‍රීයව සකස් කර ඇත — ඔබට අවශ්‍ය පරිදි Bass, Vocal සහ Treble වෙනස් කළ හැක.</p>
+      </div>
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div>
+          <div class="flex justify-between text-xs mb-1"><span id="q_bass_lbl">Bass (බේස්)</span><span id="qv_bass" class="font-mono text-amber-400">-1.0 dB</span></div>
+          <input id="qs_bass" type="range" min="-6" max="6" step="0.2" value="-1.0" class="studio-slider" />
+        </div>
+        <div>
+          <div class="flex justify-between text-xs mb-1"><span id="q_vocal_lbl">Vocal (ගායන හඬ)</span><span id="qv_vocal" class="font-mono text-amber-400">+2.8 dB</span></div>
+          <input id="qs_vocal" type="range" min="-4" max="6" step="0.2" value="2.8" class="studio-slider" />
+        </div>
+        <div>
+          <div class="flex justify-between text-xs mb-1"><span id="q_treble_lbl">Treble (ට්‍රෙබල් / Clarity)</span><span id="qv_treble" class="font-mono text-amber-400">+1.8 dB</span></div>
+          <input id="qs_treble" type="range" min="-4" max="6" step="0.2" value="1.8" class="studio-slider" />
+        </div>
+      </div>
+      <div class="flex flex-wrap items-center gap-2">
+        <button id="autoFitSongBtn" type="button" disabled class="px-3.5 py-2 rounded-lg text-xs font-semibold bg-emerald-600 hover:bg-emerald-500 text-white disabled:opacity-40">
+          ගීතයට ගැලපෙන Auto-Fit
+        </button>
+        <button id="deepBassBtn" type="button" class="px-3 py-1.5 rounded-lg text-xs font-medium bg-slate-900 border border-slate-700 hover:border-amber-500 text-slate-200">
+          Bass වැඩි
+        </button>
+        <button id="vocalBoostBtn" type="button" class="px-3 py-1.5 rounded-lg text-xs font-medium bg-slate-900 border border-slate-700 hover:border-amber-500 text-slate-200">
+          Vocal පැහැදිලි
+        </button>
+        <button id="brightTrebleBtn" type="button" class="px-3 py-1.5 rounded-lg text-xs font-medium bg-slate-900 border border-slate-700 hover:border-amber-500 text-slate-200">
+          Treble වැඩි
+        </button>
+      </div>
+    </section>
+
     <!-- EQ & Dynamics Controls -->
     <section class="grid grid-cols-1 lg:grid-cols-12 gap-4">
       <div class="lg:col-span-7 bg-[#111722] border border-slate-800 rounded-xl p-5 space-y-4">
@@ -126,11 +162,15 @@
           </div>
           <canvas id="eqOverlayCanvas" width="640" height="156" class="w-full h-36 bg-[#080C12] border border-slate-800 rounded-lg cursor-crosshair touch-none"></canvas>
           <div id="eqBandGrStrip" class="grid grid-cols-3 sm:grid-cols-6 gap-1.5"></div>
+          <div class="pt-1 space-y-1.5">
+            <div class="text-[11px] font-medium text-slate-400">Band Frequencies (Hz)</div>
+            <div id="eqBandFreqInputs" class="grid grid-cols-3 sm:grid-cols-6 gap-1.5"></div>
+          </div>
         </div>
         <div class="space-y-3">
           <div>
             <div class="flex justify-between text-xs mb-1"><span>Sub-Tight High-Pass</span><span id="v_hpf" class="font-mono text-amber-400">34 Hz</span></div>
-            <input id="s_hpf" type="range" min="20" max="90" step="2" value="34" class="studio-slider" />
+            <input id="s_hpf" type="range" min="20" max="250" step="2" value="34" class="studio-slider" />
           </div>
           <div>
             <div class="flex justify-between text-xs mb-1"><span>808 / Bass Warmth (90 Hz)</span><span id="v_low" class="font-mono text-amber-400">-1.0 dB</span></div>
@@ -194,27 +234,27 @@
       <div class="flex flex-wrap items-center justify-between gap-2 border-b border-slate-800 pb-2.5">
         <div class="flex flex-wrap items-center gap-2.5">
           <h2 id="lyricsTitle" class="text-base font-semibold text-slate-100">Auto Lyrics Corrector</h2>
-          <button id="geminiApiBadge" type="button" class="px-2.5 py-0.5 rounded-md text-[11px] font-mono border border-slate-700 bg-[#0B0F17] text-slate-300 hover:border-amber-500">
-            Offline Mode · Connect API Key
+          <button id="geminiApiBadge" type="button" class="px-2.5 py-0.5 rounded-md text-[11px] font-mono border border-emerald-500/40 bg-emerald-600/15 text-emerald-300 hover:border-amber-500">
+            Built-in Engine Ready
           </button>
         </div>
         <button id="lyricsClearBtn" type="button" class="px-2.5 py-1 rounded-md text-xs font-medium text-slate-400 hover:text-white border border-slate-800 bg-[#0B0F17]">
           Clear
         </button>
       </div>
-      <p id="lyricsSubtitle" class="text-xs text-slate-400">සිංහල, Singlish හෝ English ගීත පදවැල් ස්වයංක්‍රීයව නිවැරදි කරන්න (Browser තුළ Singlish → සිංහල + Gemini AI සඳහා optional API Key භාවිතා කළ හැක).</p>
+      <p id="lyricsSubtitle" class="text-xs text-slate-400">සිංහල, Singlish හෝ English ගීත පදවැල් ස්වයංක්‍රීයව නිවැරදි කරන්න (Browser තුළ API Key නොමැතිව Built-in Engine ක්‍රියාත්මක වේ; Android App එකේ Gemini AI සෘජුවම සම්බන්ධයි).</p>
 
       <!-- Mode Pills -->
       <div id="lyricModeBar" class="flex flex-wrap gap-2"></div>
 
       <!-- Optional Browser Gemini API Key -->
       <details id="geminiSettingsDetails" class="bg-[#0B0F17] border border-slate-800 rounded-lg p-3 text-xs">
-        <summary id="geminiKeySummary" class="cursor-pointer text-slate-300 font-medium">Gemini AI Settings (Browser API Key / Audio Lyrics Extraction)</summary>
+        <summary id="geminiKeySummary" class="cursor-pointer text-slate-300 font-medium">Optional Cloud AI Settings (Browser Audio Transcription සඳහා පමණි)</summary>
         <div class="mt-3 flex flex-col sm:flex-row gap-2">
-          <input id="geminiKeyInput" type="password" placeholder="Paste Gemini API Key (saved only in your browser)" class="flex-1 bg-[#111722] border border-slate-700 rounded-lg px-3 py-2 text-xs text-slate-100 focus:outline-none focus:border-amber-500" />
+          <input id="geminiKeyInput" type="password" placeholder="Optional Gemini API Key (Browser only — Android App needs NO key)" class="flex-1 bg-[#111722] border border-slate-700 rounded-lg px-3 py-2 text-xs text-slate-100 focus:outline-none focus:border-amber-500" />
           <button id="saveKeyBtn" type="button" class="px-3 py-2 rounded-lg text-xs font-medium bg-amber-500 hover:bg-amber-400 text-slate-950 font-semibold">Save Key</button>
         </div>
-        <p id="geminiKeyHint" class="text-[11px] text-slate-400 mt-2">API key නොමැතිව වුවද built-in Singlish → සිංහල සහ spelling/formatting auto-corrector ක්‍රියාත්මක වේ. Audio වලින් lyrics ගැනීමට සහ AI Grammar/Rhyme polish සඳහා ඔබේ Gemini API key එක එක් කරන්න.</p>
+        <p id="geminiKeyHint" class="text-[11px] text-slate-400 mt-2">Android App එකේ Gemini AI (Firebase AI Logic) සඳහා API key අවශ්‍ය නැත. Standalone browser (`index.html`) හි MP3/WAV audio එකෙන් cloud lyrics ලබාගැනීමට පමණක් optional API key එකක් භාවිතා කළ හැක.</p>
       </details>
 
       <!-- Draft Input -->
@@ -264,10 +304,10 @@
 
   <script>
     const PRESETS = [
-      { id: 'rec', name: 'Recommended Fix', p: { hpf: 34, low: -1.0, mud: -2.6, pres: 2.8, deess: -2.4, air: 1.8, thresh: -15, ratio: 2.8, width: 1.08, gain: 1.5 } },
-      { id: 'trap', name: 'Trap & Rap Punch', p: { hpf: 32, low: 1.2, mud: -3.0, pres: 2.2, deess: -1.8, air: 2.0, thresh: -16, ratio: 3.2, width: 1.12, gain: 1.8 } },
-      { id: 'vocal', name: 'Vocal Clarity', p: { hpf: 42, low: -1.5, mud: -3.2, pres: 3.6, deess: -2.8, air: 2.4, thresh: -14, ratio: 2.5, width: 0.96, gain: 1.6 } },
-      { id: 'flat', name: 'Flat (Reset)', p: { hpf: 20, low: 0, mud: 0, pres: 0, deess: 0, air: 0, thresh: -6, ratio: 1.5, width: 1.0, gain: 0 } },
+      { id: 'rec', name: 'Recommended Fix', p: { hpf: 34, low: -1.0, lowFreq: 90, mud: -2.6, mudFreq: 250, pres: 2.8, presFreq: 3200, deess: -2.4, deessFreq: 6800, air: 1.8, airFreq: 11000, thresh: -15, ratio: 2.8, width: 1.08, gain: 1.5 } },
+      { id: 'trap', name: 'Trap & Rap Punch', p: { hpf: 32, low: 1.2, lowFreq: 90, mud: -3.0, mudFreq: 250, pres: 2.2, presFreq: 3200, deess: -1.8, deessFreq: 6800, air: 2.0, airFreq: 11000, thresh: -16, ratio: 3.2, width: 1.12, gain: 1.8 } },
+      { id: 'vocal', name: 'Vocal Clarity', p: { hpf: 42, low: -1.5, lowFreq: 90, mud: -3.2, mudFreq: 250, pres: 3.6, presFreq: 3200, deess: -2.8, deessFreq: 6800, air: 2.4, airFreq: 11000, thresh: -14, ratio: 2.5, width: 0.96, gain: 1.6 } },
+      { id: 'flat', name: 'Flat (Reset)', p: { hpf: 20, low: 0, lowFreq: 90, mud: 0, mudFreq: 250, pres: 0, presFreq: 3200, deess: 0, deessFreq: 6800, air: 0, airFreq: 11000, thresh: -6, ratio: 1.5, width: 1.0, gain: 0 } },
     ];
 
     const LYRIC_MODES = [
@@ -277,6 +317,7 @@
     ];
 
     let params = { ...PRESETS[0].p };
+    let songRecommendedParams = null;
     let audioCtx = null;
     let audioBuffer = null;
     let currentTrackFileName = '';
@@ -300,8 +341,69 @@
     let selectedEqBand = 2;
     let draggingEqBand = -1;
 
-    function syncSliders() {
-      el('s_hpf').value = params.hpf; el('v_hpf').textContent = `${params.hpf} Hz`;
+    const EQ_FREQ_BANDS = [
+      { idx: 0, label: 'HPF', key: 'hpf', min: 20, max: 250 },
+      { idx: 1, label: 'Low', key: 'lowFreq', min: 40, max: 300 },
+      { idx: 2, label: 'Mud', key: 'mudFreq', min: 120, max: 1000 },
+      { idx: 3, label: 'Vocal', key: 'presFreq', min: 800, max: 8000 },
+      { idx: 4, label: 'De-Es', key: 'deessFreq', min: 2500, max: 14000 },
+      { idx: 5, label: 'Air', key: 'airFreq', min: 6000, max: 18000 }
+    ];
+
+    function formatShortHz(hz) {
+      const r = Math.round(hz);
+      if (r < 1000) return `${r}Hz`;
+      return (r % 1000 === 0) ? `${r / 1000}k` : `${(r / 1000).toFixed(1)}k`;
+    }
+
+    function renderEqFreqInputs() {
+      const container = el('eqBandFreqInputs');
+      if (!container) return;
+      if (!container.dataset.built) {
+        container.innerHTML = EQ_FREQ_BANDS.map((b) => `
+          <div data-freq-box="${b.idx}" class="rounded-lg border border-slate-800 bg-[#111722] px-2 py-1.5">
+            <div class="flex items-center justify-between text-[10px] text-slate-400 mb-0.5">
+              <span class="font-semibold">${b.label}</span>
+              <span class="font-mono text-[9px] text-slate-500">${b.min}-${b.max}</span>
+            </div>
+            <div class="flex items-center gap-1">
+              <input id="f_band_${b.idx}" type="number" min="${b.min}" max="${b.max}" step="1" class="w-full min-w-0 bg-transparent font-mono text-xs font-semibold text-slate-100 focus:outline-none" />
+              <span class="font-mono text-[10px] text-slate-400">Hz</span>
+            </div>
+          </div>
+        `).join('');
+        EQ_FREQ_BANDS.forEach((b) => {
+          const inp = el(`f_band_${b.idx}`);
+          inp.addEventListener('focus', () => { selectedEqBand = b.idx; drawEqOverlay(); });
+          inp.addEventListener('input', () => {
+            const val = parseFloat(inp.value);
+            if (!Number.isNaN(val) && val >= b.min && val <= b.max) {
+              params[b.key] = Math.round(val);
+              syncSliders(false);
+            }
+          });
+          inp.addEventListener('change', () => {
+            const val = parseFloat(inp.value);
+            const clamped = Number.isNaN(val) ? params[b.key] : Math.max(b.min, Math.min(b.max, Math.round(val)));
+            params[b.key] = clamped;
+            inp.value = clamped;
+            syncSliders(false);
+          });
+        });
+        container.dataset.built = '1';
+      }
+      EQ_FREQ_BANDS.forEach((b) => {
+        const inp = el(`f_band_${b.idx}`);
+        const box = container.querySelector(`[data-freq-box="${b.idx}"]`);
+        if (inp && document.activeElement !== inp) inp.value = Math.round(params[b.key]);
+        if (box) {
+          box.className = `rounded-lg border px-2 py-1.5 ${b.idx === selectedEqBand ? 'border-amber-500 bg-amber-500/10' : 'border-slate-800 bg-[#111722]'}`;
+        }
+      });
+    }
+
+    function syncSliders(syncFreqBoxes = true) {
+      el('s_hpf').value = params.hpf; el('v_hpf').textContent = `${Math.round(params.hpf)} Hz`;
       el('s_low').value = params.low; el('v_low').textContent = `${params.low >= 0 ? '+' : ''}${params.low.toFixed(1)} dB`;
       el('s_mud').value = params.mud; el('v_mud').textContent = `${params.mud >= 0 ? '+' : ''}${params.mud.toFixed(1)} dB`;
       el('s_pres').value = params.pres; el('v_pres').textContent = `${params.pres >= 0 ? '+' : ''}${params.pres.toFixed(1)} dB`;
@@ -311,17 +413,21 @@
       el('s_ratio').value = params.ratio; el('v_ratio').textContent = `${params.ratio.toFixed(1)} : 1`;
       el('s_width').value = params.width; el('v_width').textContent = `${params.width.toFixed(2)} x`;
       el('s_gain').value = params.gain; el('v_gain').textContent = `${params.gain >= 0 ? '+' : ''}${params.gain.toFixed(1)} dB`;
+      if (el('qs_bass')) { el('qs_bass').value = params.low; el('qv_bass').textContent = `${params.low >= 0 ? '+' : ''}${params.low.toFixed(1)} dB`; }
+      if (el('qs_vocal')) { el('qs_vocal').value = params.pres; el('qv_vocal').textContent = `${params.pres >= 0 ? '+' : ''}${params.pres.toFixed(1)} dB`; }
+      if (el('qs_treble')) { el('qs_treble').value = params.air; el('qv_treble').textContent = `${params.air >= 0 ? '+' : ''}${params.air.toFixed(1)} dB`; }
       if (chain) chain.update(params);
+      if (syncFreqBoxes) renderEqFreqInputs(); else renderEqFreqInputs();
       drawEqOverlay();
     }
 
     function buildChain(ctx, p, channels) {
       const hpf = ctx.createBiquadFilter(); hpf.type = 'highpass';
-      const low = ctx.createBiquadFilter(); low.type = 'lowshelf'; low.frequency.value = 90;
-      const mud = ctx.createBiquadFilter(); mud.type = 'peaking'; mud.frequency.value = 250; mud.Q.value = 1.4;
-      const pres = ctx.createBiquadFilter(); pres.type = 'peaking'; pres.frequency.value = 3200; pres.Q.value = 1.2;
-      const deess = ctx.createBiquadFilter(); deess.type = 'peaking'; deess.frequency.value = 6800; deess.Q.value = 2.2;
-      const air = ctx.createBiquadFilter(); air.type = 'highshelf'; air.frequency.value = 11000;
+      const low = ctx.createBiquadFilter(); low.type = 'lowshelf';
+      const mud = ctx.createBiquadFilter(); mud.type = 'peaking'; mud.Q.value = 1.4;
+      const pres = ctx.createBiquadFilter(); pres.type = 'peaking'; pres.Q.value = 1.2;
+      const deess = ctx.createBiquadFilter(); deess.type = 'peaking'; deess.Q.value = 2.2;
+      const air = ctx.createBiquadFilter(); air.type = 'highshelf';
       const comp = ctx.createDynamicsCompressor(); comp.knee.value = 6; comp.attack.value = 0.008; comp.release.value = 0.16;
       const lim = ctx.createDynamicsCompressor(); lim.threshold.value = -0.6; lim.ratio.value = 20; lim.attack.value = 0.001; lim.release.value = 0.06;
       const makeup = ctx.createGain();
@@ -349,10 +455,15 @@
       const update = (nx) => {
         const t = ctx.currentTime;
         hpf.frequency.setTargetAtTime(nx.hpf, t, 0.02);
+        low.frequency.setTargetAtTime(nx.lowFreq, t, 0.02);
         low.gain.setTargetAtTime(nx.low, t, 0.02);
+        mud.frequency.setTargetAtTime(nx.mudFreq, t, 0.02);
         mud.gain.setTargetAtTime(nx.mud, t, 0.02);
+        pres.frequency.setTargetAtTime(nx.presFreq, t, 0.02);
         pres.gain.setTargetAtTime(nx.pres, t, 0.02);
+        deess.frequency.setTargetAtTime(nx.deessFreq, t, 0.02);
         deess.gain.setTargetAtTime(nx.deess, t, 0.02);
+        air.frequency.setTargetAtTime(nx.airFreq, t, 0.02);
         air.gain.setTargetAtTime(nx.air, t, 0.02);
         comp.threshold.setTargetAtTime(nx.thresh, t, 0.02);
         comp.ratio.setTargetAtTime(nx.ratio, t, 0.02);
@@ -392,9 +503,34 @@
       const peakDb = 20 * Math.log10(Math.max(1e-6, peak));
       el('trackStats').textContent = `${fmtTime(buf.duration)} · ${(buf.sampleRate / 1000).toFixed(1)} kHz · Peak ${peakDb.toFixed(1)} dBFS · RMS ${rmsDb.toFixed(1)} dBFS`;
 
+      const subDb = measureBand(ch0, buf.sampleRate, 'bandpass', 42, 0.8);
+      const bassDb = measureBand(ch0, buf.sampleRate, 'bandpass', 88, 0.9);
       const mudDb = measureBand(ch0, buf.sampleRate, 'bandpass', 250, 1.2);
       const vocDb = measureBand(ch0, buf.sampleRate, 'bandpass', 3200, 1.0);
       const harshDb = measureBand(ch0, buf.sampleRate, 'bandpass', 6800, 1.5);
+      const airDb = measureBand(ch0, buf.sampleRate, 'bandpass', 11500, 0.8);
+
+      const crestDb = Math.max(3, peakDb - rmsDb);
+      const snapS = (v, minV, maxV, step) => Math.max(minV, Math.min(maxV, Math.round(Math.max(minV, Math.min(maxV, v)) / step) * step));
+      const recHpf = subDb > rmsDb - 6.5 ? 44 : (subDb > rmsDb - 10.0 ? 36 : 28);
+      const recBass = snapS((rmsDb - 5.0 - bassDb) * 0.55, -3.6, 4.2, 0.2);
+      const mudEx = mudDb - vocDb - 2.0;
+      const recMud = mudEx > 0 ? snapS(-0.8 - mudEx * 0.45, -4.8, 0.0, 0.2) : -0.6;
+      const recVocal = snapS((rmsDb - 8.5 - vocDb) * 0.55, -1.2, 4.4, 0.2);
+      const sibEx = harshDb - vocDb + 4.5;
+      const recDeess = sibEx > 0 ? snapS(-1.0 - sibEx * 0.45, -4.6, -0.4, 0.2) : -1.0;
+      const recTreble = snapS((rmsDb - 14.5 - airDb) * 0.50, -1.8, 3.8, 0.2);
+      const recThresh = crestDb > 13 ? -18 : (crestDb > 9.5 ? -15 : -11);
+      const recRatio = crestDb > 13 ? 3.0 : (crestDb > 9.5 ? 2.6 : 1.8);
+      const recGain = snapS((-11.5 - rmsDb) * 0.35, -1.0, 3.2, 0.2);
+
+      songRecommendedParams = {
+        hpf: recHpf, low: recBass, lowFreq: 90, mud: recMud, mudFreq: 250,
+        pres: recVocal, presFreq: 3200, deess: recDeess, deessFreq: 6800,
+        air: recTreble, airFreq: 11000, thresh: recThresh, ratio: recRatio, width: 1.08, gain: recGain
+      };
+      params = { ...songRecommendedParams };
+      syncSliders();
 
       const issues = [];
       if (mudDb - vocDb > 4) issues.push({ title: '250Hz Low-Mid Mud ගතිය වැඩියි', detail: '808/Bass කලාපය Vocal හඬට බාධා කරයි. Mud Cut (-2.6 dB) නිර්දේශිතයි.' });
@@ -455,11 +591,11 @@
       const sr = audioBuffer ? audioBuffer.sampleRate : 44100;
       return (
         biquadMagDb('highpass', params.hpf, 0.7071, 0, f, sr) +
-        biquadMagDb('lowshelf', 90, 0.7071, params.low, f, sr) +
-        biquadMagDb('peaking', 250, 1.4, params.mud, f, sr) +
-        biquadMagDb('peaking', 3200, 1.2, params.pres, f, sr) +
-        biquadMagDb('peaking', 6800, 2.2, params.deess, f, sr) +
-        biquadMagDb('highshelf', 11000, 0.7071, params.air, f, sr)
+        biquadMagDb('lowshelf', params.lowFreq, 0.7071, params.low, f, sr) +
+        biquadMagDb('peaking', params.mudFreq, 1.4, params.mud, f, sr) +
+        biquadMagDb('peaking', params.presFreq, 1.2, params.pres, f, sr) +
+        biquadMagDb('peaking', params.deessFreq, 2.2, params.deess, f, sr) +
+        biquadMagDb('highshelf', params.airFreq, 0.7071, params.air, f, sr)
       );
     }
 
@@ -496,11 +632,11 @@
 
       const bands = [
         { idx: 0, label: 'HPF', freq: params.hpf, eqDb: totalEqDbAt(params.hpf), nodeDb: totalEqDbAt(params.hpf) },
-        { idx: 1, label: '90Hz', freq: 90, eqDb: totalEqDbAt(90), nodeDb: params.low },
-        { idx: 2, label: '250Hz', freq: 250, eqDb: totalEqDbAt(250), nodeDb: params.mud },
-        { idx: 3, label: '3.2k', freq: 3200, eqDb: totalEqDbAt(3200), nodeDb: params.pres },
-        { idx: 4, label: '6.8k', freq: 6800, eqDb: totalEqDbAt(6800), nodeDb: params.deess },
-        { idx: 5, label: '11k', freq: 11000, eqDb: totalEqDbAt(11000), nodeDb: params.air }
+        { idx: 1, label: formatShortHz(params.lowFreq), freq: params.lowFreq, eqDb: totalEqDbAt(params.lowFreq), nodeDb: params.low },
+        { idx: 2, label: formatShortHz(params.mudFreq), freq: params.mudFreq, eqDb: totalEqDbAt(params.mudFreq), nodeDb: params.mud },
+        { idx: 3, label: formatShortHz(params.presFreq), freq: params.presFreq, eqDb: totalEqDbAt(params.presFreq), nodeDb: params.pres },
+        { idx: 4, label: formatShortHz(params.deessFreq), freq: params.deessFreq, eqDb: totalEqDbAt(params.deessFreq), nodeDb: params.deess },
+        { idx: 5, label: formatShortHz(params.airFreq), freq: params.airFreq, eqDb: totalEqDbAt(params.airFreq), nodeDb: params.air }
       ];
 
       // Per-band live energy + Gain Reduction drop bars
@@ -663,22 +799,36 @@
       el('playBtn').disabled = false;
       el('exportBtn').disabled = false;
       el('audioLyricsBtn').disabled = false;
+      if (el('autoFitSongBtn')) el('autoFitSongBtn').disabled = false;
       runAudit(audioBuffer);
       drawWave();
     }
 
-    // --- Auto Lyrics Corrector (Offline Singlish/Formatting + Optional Gemini AI) ---
+    // --- Auto Lyrics Corrector (Built-in Singlish/Formatting + Optional Browser Cloud AI) ---
     const SINGLISH_WORD_FIXES = {
-      'mage': 'මගේ', 'oya': 'ඔයා', 'oyage': 'ඔයාගේ', 'hitha': 'හිත', 'laga': 'ළඟ', 'langa': 'ළඟ',
-      'inna': 'ඉන්න', 'adare': 'ආදරේ', 'adaraya': 'ආදරය', 'man': 'මං', 'mama': 'මම', 'api': 'අපි',
-      'thani': 'තනි', 'wela': 'වෙලා', 'giya': 'ගියා', 'enawa': 'එනවා', 'yanawa': 'යනවා',
-      'hadawatha': 'හදවත', 'rathriya': 'රාත්‍රිය', 'sanda': 'සඳ', 'tharu': 'තරු', 'mal': 'මල්',
-      'sulanga': 'සුළඟ', 'wessa': 'වැස්ස', 'kandulu': 'කඳුළු', 'sina': 'සිනා', 'sinaha': 'සිනහ',
+      'mage': 'මගේ', 'oya': 'ඔයා', 'oyage': 'ඔයාගේ', 'oyawa': 'ඔයාව', 'oyata': 'ඔයාට',
+      'hitha': 'හිත', 'laga': 'ළඟ', 'langa': 'ළඟ', 'inna': 'ඉන්න', 'innawa': 'ඉන්නවා',
+      'adare': 'ආදරේ', 'adarei': 'ආදරෙයි', 'adaraya': 'ආදරය', 'man': 'මං', 'mama': 'මම', 'api': 'අපි',
+      'thani': 'තනි', 'thaniwela': 'තනිවෙලා', 'wela': 'වෙලා', 'giya': 'ගියා', 'giyath': 'ගියත්',
+      'enawa': 'එනවා', 'enne': 'එන්නේ', 'yanawa': 'යනවා', 'yanne': 'යන්නේ', 'yanna': 'යන්න',
+      'hadawatha': 'හදවත', 'hadawathe': 'හදවතේ', 'rathriya': 'රාත්‍රිය', 'rae': 'රෑ', 'raeya': 'රැය',
+      'sanda': 'සඳ', 'handa': 'හඳ', 'tharu': 'තරු', 'mal': 'මල්', 'sulanga': 'සුළඟ',
+      'wessa': 'වැස්ස', 'wassa': 'වැස්ස', 'kandulu': 'කඳුළු', 'sina': 'සිනා', 'sinaha': 'සිනහ',
       'jiwithe': 'ජීවිතේ', 'jeewithe': 'ජීවිතේ', 'me': 'මේ', 'e': 'ඒ', 'nam': 'නම්', 'na': 'නෑ',
       'nae': 'නෑ', 'ne': 'නෑ', 'eth': 'ඒත්', 'ithin': 'ඉතින්', 'wage': 'වගේ', 'katha': 'කතා',
-      'dawasak': 'දවසක්', 'hamadama': 'හැමදාම', 'sitha': 'සිත', 'pathum': 'පැතුම්', 'heena': 'හීන',
-      'nidahas': 'නිදහස්', 'lassana': 'ලස්සන', 'sundara': 'සුන්දර', 'pem': 'පෙම්', 'obata': 'ඔබට',
-      'oba': 'ඔබ', 'mata': 'මට', 'eka': 'එක', 'ekka': 'එක්ක', 'harima': 'හරිම', 'godak': 'ගොඩක්'
+      'dawasak': 'දවසක්', 'dawasa': 'දවස', 'hamadama': 'හැමදාම', 'sitha': 'සිත', 'sithe': 'සිතේ',
+      'pathum': 'පැතුම්', 'heena': 'හීන', 'heenayak': 'හීනයක්', 'nidahas': 'නිදහස්', 'lassana': 'ලස්සන',
+      'sundara': 'සුන්දර', 'pem': 'පෙම්', 'obata': 'ඔබට', 'oba': 'ඔබ', 'obe': 'ඔබේ', 'obawa': 'ඔබව',
+      'mata': 'මට', 'mawa': 'මාව', 'eka': 'එක', 'ekka': 'එක්ක', 'harima': 'හරිම', 'godak': 'ගොඩක්',
+      'nethu': 'නෙතු', 'aes': 'ඇස්', 'as': 'ඇස්', 'mathaka': 'මතක', 'mathakaya': 'මතකය',
+      'rahase': 'රහසේ', 'paalu': 'පාළු', 'palu': 'පාළු', 'ahasa': 'අහස', 'ahase': 'අහසේ',
+      'hiru': 'හිරු', 'muhuda': 'මුහුද', 'ganga': 'ගඟ', 'diwiya': 'දිවිය', 'kawada': 'කවදා',
+      'kawadada': 'කවදාද', 'kohedo': 'කොහෙදෝ', 'koheda': 'කොහෙද', 'ai': 'ඇයි', 'eyi': 'ඇයි',
+      'mokada': 'මොකද', 'nisa': 'නිසා', 'nisai': 'නිසයි', 'thamai': 'තමයි', 'kiyala': 'කියලා',
+      'kiyanna': 'කියන්න', 'ahanna': 'අහන්න', 'balanna': 'බලන්න', 'denna': 'දෙන්න', 'ganna': 'ගන්න',
+      'wenna': 'වෙන්න', 'bala': 'බලා', 'hamuwuna': 'හමුවුණා', 'wenwela': 'වෙන්වෙලා',
+      'thawama': 'තවම', 'thama': 'තාම', 'sada': 'සදා', 'sadakal': 'සදාකල්', 'hina': 'හිනා',
+      'suwanda': 'සුවඳ', 'eliyak': 'එළියක්', 'anduru': 'අඳුරු', 'seethala': 'සීතල', 'unusuma': 'උණුසුම'
     };
 
     const ENGLISH_TYPO_FIXES = {
@@ -896,7 +1046,7 @@
       const c = el('eqOverlayCanvas');
       const minF = 20, maxF = 20000, minDb = -12, maxDb = 9;
       const logMin = Math.log10(minF), logMax = Math.log10(maxF);
-      const getBandFreqs = () => [params.hpf, 90, 250, 3200, 6800, 11000];
+      const getBandFreqs = () => [params.hpf, params.lowFreq, params.mudFreq, params.presFreq, params.deessFreq, params.airFreq];
       const fToX = (f, w) => ((Math.log10(Math.max(minF, Math.min(maxF, f))) - logMin) / (logMax - logMin)) * w;
       const xToF = (x, w) => Math.pow(10, logMin + Math.max(0, Math.min(1, x / w)) * (logMax - logMin));
       const yToDb = (y, h) => maxDb - Math.max(0, Math.min(1, y / h)) * (maxDb - minDb);
@@ -905,12 +1055,13 @@
       const applyDrag = (clientX, clientY) => {
         const r = c.getBoundingClientRect();
         const x = clientX - r.left, y = clientY - r.top;
-        if (draggingEqBand === 0) params.hpf = snap(xToF(x, r.width), 20, 90, 2);
-        else if (draggingEqBand === 1) params.low = snap(yToDb(y, r.height), -6, 6, 0.2);
-        else if (draggingEqBand === 2) params.mud = snap(yToDb(y, r.height), -6, 4, 0.2);
-        else if (draggingEqBand === 3) params.pres = snap(yToDb(y, r.height), -4, 6, 0.2);
-        else if (draggingEqBand === 4) params.deess = snap(yToDb(y, r.height), -6, 3, 0.2);
-        else if (draggingEqBand === 5) params.air = snap(yToDb(y, r.height), -4, 6, 0.2);
+        const f = xToF(x, r.width);
+        if (draggingEqBand === 0) params.hpf = snap(f, 20, 250, 2);
+        else if (draggingEqBand === 1) { params.low = snap(yToDb(y, r.height), -6, 6, 0.2); params.lowFreq = snap(f, 40, 300, 1); }
+        else if (draggingEqBand === 2) { params.mud = snap(yToDb(y, r.height), -6, 4, 0.2); params.mudFreq = snap(f, 120, 1000, 1); }
+        else if (draggingEqBand === 3) { params.pres = snap(yToDb(y, r.height), -4, 6, 0.2); params.presFreq = snap(f, 800, 8000, 1); }
+        else if (draggingEqBand === 4) { params.deess = snap(yToDb(y, r.height), -6, 3, 0.2); params.deessFreq = snap(f, 2500, 14000, 1); }
+        else if (draggingEqBand === 5) { params.air = snap(yToDb(y, r.height), -4, 6, 0.2); params.airFreq = snap(f, 6000, 18000, 1); }
         syncSliders();
       };
 
@@ -968,11 +1119,11 @@
       const badge = el('geminiApiBadge');
       if (!badge) return;
       if (key) {
-        badge.textContent = lang === 'si' ? 'Gemini API සම්බන්ධයි ✓' : 'Gemini API Connected ✓';
+        badge.textContent = lang === 'si' ? 'Gemini Cloud AI සම්බන්ධයි ✓' : 'Gemini Cloud AI Connected ✓';
         badge.className = 'px-2.5 py-0.5 rounded-md text-[11px] font-mono border border-emerald-500/50 bg-emerald-600/15 text-emerald-300';
       } else {
-        badge.textContent = lang === 'si' ? 'Offline Mode · API Key එක් කරන්න' : 'Offline Mode · Connect API Key';
-        badge.className = 'px-2.5 py-0.5 rounded-md text-[11px] font-mono border border-amber-500/40 bg-amber-500/10 text-amber-300 hover:border-amber-400';
+        badge.textContent = lang === 'si' ? 'Built-in Lyrics Engine සක්‍රීයයි ✓' : 'Built-in Lyrics Engine Ready ✓';
+        badge.className = 'px-2.5 py-0.5 rounded-md text-[11px] font-mono border border-emerald-500/40 bg-emerald-600/10 text-emerald-300 hover:border-amber-400';
       }
     }
 
@@ -1027,8 +1178,8 @@
         const d = el('geminiSettingsDetails');
         if (d) d.open = true;
         showLyricError(lang === 'si'
-          ? 'Audio එකෙන් lyrics හඳුනාගැනීමට ඉහත Gemini AI Settings තුළ ඔබේ Gemini API Key එක ඇතුළත් කරන්න.'
-          : 'Enter your Gemini API Key in Gemini AI Settings above to extract and correct lyrics from audio.');
+          ? 'Audio file එකෙන් lyrics extract කිරීම Android App එකේ API key නොමැතිව ස්වයංක්‍රීයව වැඩ කරයි. Browser එකේ පමණක් audio transcription සඳහා Optional Cloud AI Settings තුළ key එකක් එක් කරන්න.'
+          : 'Audio lyrics extraction works automatically with no API key inside the Android App. For standalone browser extraction, add an optional key in Cloud AI Settings above.');
         return;
       }
       el('audioLyricsBtn').disabled = true;
@@ -1066,6 +1217,29 @@
     [['s_hpf', 'hpf'], ['s_low', 'low'], ['s_mud', 'mud'], ['s_pres', 'pres'], ['s_deess', 'deess'], ['s_air', 'air'], ['s_thresh', 'thresh'], ['s_ratio', 'ratio'], ['s_width', 'width'], ['s_gain', 'gain']]
       .forEach(([id, key]) => el(id).addEventListener('input', (e) => { params[key] = parseFloat(e.target.value); syncSliders(); }));
 
+    [['qs_bass', 'low'], ['qs_vocal', 'pres'], ['qs_treble', 'air']]
+      .forEach(([id, key]) => el(id)?.addEventListener('input', (e) => { params[key] = parseFloat(e.target.value); syncSliders(); }));
+
+    el('autoFitSongBtn')?.addEventListener('click', () => {
+      if (songRecommendedParams) { params = { ...songRecommendedParams }; syncSliders(); }
+    });
+    el('deepBassBtn')?.addEventListener('click', () => {
+      params.hpf = 32;
+      params.low = Math.min(6, Math.round((params.low + 1.4) * 5) / 5);
+      params.mud = Math.max(-6, Math.round((params.mud - 0.4) * 5) / 5);
+      syncSliders();
+    });
+    el('vocalBoostBtn')?.addEventListener('click', () => {
+      params.mud = Math.max(-6, Math.round((params.mud - 0.6) * 5) / 5);
+      params.pres = Math.min(6, Math.round((params.pres + 1.4) * 5) / 5);
+      syncSliders();
+    });
+    el('brightTrebleBtn')?.addEventListener('click', () => {
+      params.air = Math.min(6, Math.round((params.air + 1.4) * 5) / 5);
+      params.deess = Math.min(-1.6, params.deess);
+      syncSliders();
+    });
+
     el('presetBar').innerHTML = PRESETS.map((pr) => `<button data-id="${pr.id}" type="button" class="px-3 py-1.5 rounded-lg text-xs font-medium bg-slate-900 border border-slate-700 hover:border-amber-500 text-slate-200">${pr.name}</button>`).join('');
     el('presetBar').querySelectorAll('button').forEach((btn) => btn.onclick = () => {
       const found = PRESETS.find((x) => x.id === btn.dataset.id);
@@ -1078,9 +1252,19 @@
       el('exportBtn').textContent = lang === 'si' ? 'හැදූ WAV ගන්න' : 'Export Fixed WAV';
       el('dropTitle').textContent = lang === 'si' ? 'ඔබේ MP3 / WAV ගීතය මෙතනට දමන්න (හෝ Click කර තෝරන්න)' : 'Drop or Click to Upload MP3 / WAV Song';
       el('btnOrig').textContent = lang === 'si' ? 'A: මුල් ගීතය' : 'A: Original';
+      if (el('toneShaperSubtitle')) el('toneShaperSubtitle').textContent = lang === 'si'
+        ? 'ගීතයේ සංඛ්‍යාත පරීක්ෂා කර ස්වයංක්‍රීයව සකස් කර ඇත — ඔබට අවශ්‍ය පරිදි Bass, Vocal සහ Treble වෙනස් කළ හැක.'
+        : 'Automatically tuned to your song\'s frequency profile—fine-tune Bass, Vocal, and Treble anytime.';
+      if (el('q_bass_lbl')) el('q_bass_lbl').textContent = lang === 'si' ? 'Bass (බේස්)' : 'Bass';
+      if (el('q_vocal_lbl')) el('q_vocal_lbl').textContent = lang === 'si' ? 'Vocal (ගායන හඬ)' : 'Vocal';
+      if (el('q_treble_lbl')) el('q_treble_lbl').textContent = lang === 'si' ? 'Treble (ට්‍රෙබල් / Clarity)' : 'Treble / Air';
+      if (el('autoFitSongBtn')) el('autoFitSongBtn').textContent = lang === 'si' ? 'ගීතයට ගැලපෙන Auto-Fit' : 'Auto-Fit to Song';
+      if (el('deepBassBtn')) el('deepBassBtn').textContent = lang === 'si' ? 'Bass වැඩි' : 'Deep Bass';
+      if (el('vocalBoostBtn')) el('vocalBoostBtn').textContent = lang === 'si' ? 'Vocal පැහැදිලි' : 'Vocal Boost';
+      if (el('brightTrebleBtn')) el('brightTrebleBtn').textContent = lang === 'si' ? 'Treble වැඩි' : 'Bright Treble';
       el('lyricsSubtitle').textContent = lang === 'si'
-        ? 'සිංහල, Singlish හෝ English ගීත පදවැල් ස්වයංක්‍රීයව නිවැරදි කරන්න (Browser තුළ Singlish → සිංහල + Gemini AI සඳහා optional API Key භාවිතා කළ හැක).'
-        : 'Auto-correct Sinhala, Singlish, or English lyrics in the browser (built-in Singlish → Sinhala + optional Gemini API Key for full AI & audio lyrics extraction).';
+        ? 'සිංහල, Singlish හෝ English ගීත පදවැල් ස්වයංක්‍රීයව නිවැරදි කරන්න (Browser තුළ API Key නොමැතිව Built-in Engine ක්‍රියාත්මක වේ; Android App එකේ Gemini AI සෘජුවම සම්බන්ධයි).'
+        : 'Auto-correct Sinhala, Singlish, or English lyrics in the browser (Built-in Engine works with no API key; Android App connects Gemini AI directly).';
       el('audioLyricsBtn').textContent = lang === 'si' ? 'ගීතයෙන් Lyrics ගෙන හදන්න' : 'Extract & Fix from Song';
       el('lyricsResultTitle').textContent = lang === 'si' ? 'නිවැරදි කළ Lyrics' : 'Corrected Lyrics';
       el('applyLyricsBtn').textContent = lang === 'si' ? 'Editor වෙත යොදන්න' : 'Apply to Editor';
