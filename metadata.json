@@ -1,0 +1,6 @@
+{
+  "name": "Swara Studio",
+  "description": "Audio mastering, 6-band parametric repair EQ, dynamics compressor, mid-side stereo width, and song flaw analyzer.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

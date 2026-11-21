@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Swara Studio</string>
+    <string name="cd_upload_audio">Upload audio file</string>
+    <string name="cd_play_pause">Toggle audio playback</string>
+    <string name="cd_export_wav">Export mastered WAV file</string>
+    <string name="cd_toggle_language">Switch between Sinhala and English</string>
+</resources>

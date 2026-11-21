@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Swara Studio — Song Doctor & Mastering</title>
-  <meta name="description" content="Browser-based audio mastering, EQ repair, and song flaw analyzer." />
+  <meta name="description" content="Browser-based audio mastering, EQ repair, song flaw analyzer, and auto lyrics corrector." />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Noto+Sans+Sinhala:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
@@ -89,14 +89,14 @@
     <!-- Upload Prompt Banner (shown until audio is loaded) -->
     <section id="dropZone" class="bg-[#111722] border border-dashed border-slate-700 rounded-xl p-6 text-center space-y-2 cursor-pointer hover:border-amber-500 transition-colors">
       <p id="dropTitle" class="text-sm font-medium text-slate-200">ඔබේ MP3 / WAV ගීතය මෙතනට දමන්න (හෝ Click කර තෝරන්න)</p>
-      <p class="text-xs text-slate-400">Browser එක ඇතුළේම අඩුපාඩු පරීක්ෂා කර EQ / Compressor යොදා WAV ලෙස download කළ හැක.</p>
+      <p id="dropSub" class="text-xs text-slate-400">Browser එක ඇතුළේම අඩුපාඩු පරීක්ෂා කර EQ / Compressor යොදා WAV ලෙස download කළ හැක.</p>
     </section>
 
     <!-- Waveform & Live Spectrum -->
     <section class="grid grid-cols-1 lg:grid-cols-12 gap-4">
       <div class="lg:col-span-8 bg-[#111722] border border-slate-800 rounded-xl p-4 space-y-3">
         <div class="flex items-center justify-between text-xs text-slate-400">
-          <span>Waveform (Click කර අවශ්‍ය තැනට යන්න)</span>
+          <span id="waveLabel">Waveform (Click කර අවශ්‍ය තැනට යන්න)</span>
           <span id="timeDisplay" class="font-mono text-slate-200">0:00 / 0:00</span>
         </div>
         <canvas id="waveCanvas" width="800" height="112" class="w-full h-28 bg-[#0B0F17] border border-slate-800 rounded-lg cursor-pointer"></canvas>
@@ -175,9 +175,71 @@
 
     <!-- DSP Diagnostics -->
     <section class="bg-[#111722] border border-slate-800 rounded-xl p-5 space-y-3">
-      <h2 class="text-base font-semibold border-b border-slate-800 pb-2.5">හඳුනාගත් Audio අඩුපාඩු (Browser DSP Audit)</h2>
+      <h2 id="diagTitle" class="text-base font-semibold border-b border-slate-800 pb-2.5">හඳුනාගත් Audio අඩුපාඩු (Browser DSP Audit)</h2>
       <p id="diagSummary" class="text-sm text-slate-300">ගීතයක් upload කළ පසු සංඛ්‍යාත සහ ශබ්ද අඩුපාඩු මෙහි දිස්වේ.</p>
       <div id="diagList" class="divide-y divide-slate-800"></div>
+    </section>
+
+    <!-- Auto Lyrics Corrector -->
+    <section class="bg-[#111722] border border-slate-800 rounded-xl p-5 space-y-4">
+      <div class="flex flex-wrap items-center justify-between gap-2 border-b border-slate-800 pb-2.5">
+        <h2 id="lyricsTitle" class="text-base font-semibold text-slate-100">Auto Lyrics Corrector</h2>
+        <button id="lyricsClearBtn" type="button" class="px-2.5 py-1 rounded-md text-xs font-medium text-slate-400 hover:text-white border border-slate-800 bg-[#0B0F17]">
+          Clear
+        </button>
+      </div>
+      <p id="lyricsSubtitle" class="text-xs text-slate-400">සිංහල, Singlish හෝ English ගීත පදවැල් ස්වයංක්‍රීයව නිවැරදි කරන්න (Browser තුළ Singlish → සිංහල + Gemini AI සඳහා optional API Key භාවිතා කළ හැක).</p>
+
+      <!-- Mode Pills -->
+      <div id="lyricModeBar" class="flex flex-wrap gap-2"></div>
+
+      <!-- Optional Browser Gemini API Key -->
+      <details class="bg-[#0B0F17] border border-slate-800 rounded-lg p-3 text-xs">
+        <summary id="geminiKeySummary" class="cursor-pointer text-slate-300 font-medium">Gemini AI Settings (Optional — Browser AI / Audio Lyrics Extraction)</summary>
+        <div class="mt-3 flex flex-col sm:flex-row gap-2">
+          <input id="geminiKeyInput" type="password" placeholder="Optional Gemini API Key (saved only in your browser)" class="flex-1 bg-[#111722] border border-slate-700 rounded-lg px-3 py-2 text-xs text-slate-100 focus:outline-none focus:border-amber-500" />
+          <button id="saveKeyBtn" type="button" class="px-3 py-2 rounded-lg text-xs font-medium bg-slate-800 hover:bg-slate-700 text-slate-200">Save Key</button>
+        </div>
+        <p id="geminiKeyHint" class="text-[11px] text-slate-400 mt-2">API key නොමැතිව වුවද built-in Singlish → සිංහල සහ spelling/formatting auto-corrector ක්‍රියාත්මක වේ. Audio වලින් lyrics ගැනීමට සහ AI Grammar/Rhyme polish සඳහා ඔබේ Gemini API key එක එක් කරන්න.</p>
+      </details>
+
+      <!-- Draft Input -->
+      <textarea id="lyricsInput" rows="5" placeholder="ඔබේ ගීතයේ Lyrics මෙහි type හෝ paste කරන්න...&#10;(උදා: Mage hitha laga inna oya...)" class="w-full bg-[#0B0F17] border border-slate-800 focus:border-amber-500 rounded-xl p-3.5 text-sm text-slate-100 leading-relaxed focus:outline-none"></textarea>
+
+      <!-- Action Buttons -->
+      <div class="flex flex-wrap items-center gap-2.5">
+        <button id="autoCorrectBtn" type="button" class="px-4 py-2 rounded-lg text-xs font-semibold bg-amber-500 hover:bg-amber-400 text-slate-950">
+          Auto Correct Lyrics
+        </button>
+        <button id="audioLyricsBtn" type="button" disabled class="px-4 py-2 rounded-lg text-xs font-semibold bg-emerald-600/20 border border-emerald-500/60 text-emerald-300 hover:bg-emerald-600/30 disabled:opacity-40">
+          ගීතයෙන් Lyrics ගෙන හදන්න
+        </button>
+      </div>
+
+      <!-- Error / Status -->
+      <div id="lyricsError" class="hidden bg-[#0B0F17] border border-red-500/80 rounded-lg p-3 text-xs text-red-300"></div>
+
+      <!-- Result Box -->
+      <div id="lyricsResultCard" class="hidden bg-[#0B0F17] border border-amber-500/40 rounded-xl p-4 space-y-3">
+        <div class="flex items-center justify-between gap-2">
+          <span id="lyricsResultTitle" class="text-sm font-semibold text-amber-400">නිවැරදි කළ Lyrics</span>
+          <span id="lyricsLangBadge" class="text-[11px] font-mono px-2 py-0.5 rounded bg-emerald-600/20 text-emerald-300"></span>
+        </div>
+        <p id="lyricsSummaryNote" class="text-xs text-slate-400"></p>
+        <pre id="lyricsCorrectedText" class="whitespace-pre-wrap font-sans text-sm leading-relaxed text-slate-100 bg-[#111722] border border-slate-800 rounded-lg p-3.5"></pre>
+        <div class="flex flex-wrap gap-2">
+          <button id="applyLyricsBtn" type="button" class="px-3.5 py-2 rounded-lg text-xs font-semibold bg-emerald-600 hover:bg-emerald-500 text-white">
+            Editor වෙත යොදන්න
+          </button>
+          <button id="copyLyricsBtn" type="button" class="px-3.5 py-2 rounded-lg text-xs font-medium bg-slate-900 border border-slate-700 hover:border-amber-500 text-slate-200">
+            Copy
+          </button>
+        </div>
+        <div class="border-t border-slate-800 pt-3 space-y-2">
+          <div id="lyricsFixesHeader" class="text-xs font-semibold text-slate-300">සිදු කළ නිවැරදි කිරීම්</div>
+          <div id="lyricsFixesList" class="space-y-2"></div>
+        </div>
+      </div>
     </section>
   </main>
 
@@ -189,9 +251,16 @@
       { id: 'flat', name: 'Flat (Reset)', p: { hpf: 20, low: 0, mud: 0, pres: 0, deess: 0, air: 0, thresh: -6, ratio: 1.5, width: 1.0, gain: 0 } },
     ];
 
+    const LYRIC_MODES = [
+      { id: 'spelling', si: 'අක්ෂර හා ව්‍යාකරණ', en: 'Spelling & Grammar' },
+      { id: 'singlish', si: 'Singlish → සිංහල', en: 'Singlish → සිංහල' },
+      { id: 'rhythm', si: 'රිද්මය හා එළිසමය', en: 'Rhythm & Rhyme' }
+    ];
+
     let params = { ...PRESETS[0].p };
     let audioCtx = null;
     let audioBuffer = null;
+    let currentTrackFileName = '';
     let peaks = [];
     let isPlaying = false;
     let isBypassed = false;
@@ -204,6 +273,7 @@
     let dryGain = null;
     let wetGain = null;
     let lang = 'si';
+    let lyricMode = 'spelling';
 
     const el = (id) => document.getElementById(id);
     const fmtTime = (s) => `${Math.floor(s / 60)}:${Math.floor(s % 60).toString().padStart(2, '0')}`;
@@ -383,6 +453,7 @@
       const tmp = new (window.AudioContext || window.webkitAudioContext)();
       audioBuffer = await tmp.decodeAudioData(ab);
       await tmp.close();
+      currentTrackFileName = name;
       const ch0 = audioBuffer.getChannelData(0), bars = 140, step = Math.max(1, Math.floor(ch0.length / bars));
       peaks = [];
       for (let i = 0; i < bars; i++) {
@@ -394,8 +465,203 @@
       el('dropZone').classList.add('hidden');
       el('playBtn').disabled = false;
       el('exportBtn').disabled = false;
+      el('audioLyricsBtn').disabled = false;
       runAudit(audioBuffer);
       drawWave();
+    }
+
+    // --- Auto Lyrics Corrector (Offline Singlish/Formatting + Optional Gemini AI) ---
+    const SINGLISH_WORD_FIXES = {
+      'mage': 'මගේ', 'oya': 'ඔයා', 'oyage': 'ඔයාගේ', 'hitha': 'හිත', 'laga': 'ළඟ', 'langa': 'ළඟ',
+      'inna': 'ඉන්න', 'adare': 'ආදරේ', 'adaraya': 'ආදරය', 'man': 'මං', 'mama': 'මම', 'api': 'අපි',
+      'thani': 'තනි', 'wela': 'වෙලා', 'giya': 'ගියා', 'enawa': 'එනවා', 'yanawa': 'යනවා',
+      'hadawatha': 'හදවත', 'rathriya': 'රාත්‍රිය', 'sanda': 'සඳ', 'tharu': 'තරු', 'mal': 'මල්',
+      'sulanga': 'සුළඟ', 'wessa': 'වැස්ස', 'kandulu': 'කඳුළු', 'sina': 'සිනා', 'sinaha': 'සිනහ',
+      'jiwithe': 'ජීවිතේ', 'jeewithe': 'ජීවිතේ', 'me': 'මේ', 'e': 'ඒ', 'nam': 'නම්', 'na': 'නෑ',
+      'nae': 'නෑ', 'ne': 'නෑ', 'eth': 'ඒත්', 'ithin': 'ඉතින්', 'wage': 'වගේ', 'katha': 'කතා',
+      'dawasak': 'දවසක්', 'hamadama': 'හැමදාම', 'sitha': 'සිත', 'pathum': 'පැතුම්', 'heena': 'හීන',
+      'nidahas': 'නිදහස්', 'lassana': 'ලස්සන', 'sundara': 'සුන්දර', 'pem': 'පෙම්', 'obata': 'ඔබට',
+      'oba': 'ඔබ', 'mata': 'මට', 'eka': 'එක', 'ekka': 'එක්ක', 'harima': 'හරිම', 'godak': 'ගොඩක්'
+    };
+
+    const ENGLISH_TYPO_FIXES = {
+      'teh': 'the', 'recieve': 'receive', 'seperate': 'separate', 'occured': 'occurred',
+      'untill': 'until', 'definately': 'definitely', 'thier': 'their', 'dont': "don't",
+      'cant': "can't", 'wont': "won't", 'im': "I'm", 'ive': "I've", 'ill': "I'll",
+      'youre': "you're", 'theyre': "they're", 'whats': "what's", 'thats': "that's",
+      'becuase': 'because', 'alwayz': 'always', 'forevr': 'forever', 'togther': 'together',
+      'heartbreake': 'heartbreak', 'tonite': 'tonight', 'lonly': 'lonely', 'memoriz': 'memories'
+    };
+
+    function offlineAutoCorrectLyrics(raw, mode) {
+      const fixes = [];
+      const lines = raw.replace(/\r\n/g, '\n').split('\n');
+      const cleanedLines = lines.map((line) => {
+        let trimmed = line.replace(/\s+/g, ' ').trim();
+        if (!trimmed) return '';
+        if (/^\[.*\]$/.test(trimmed)) return trimmed;
+
+        const tokens = trimmed.split(' ').map((tok) => {
+          const match = tok.match(/^([^A-Za-z0-9\u0D80-\u0DFF]*)([A-Za-z0-9\u0D80-\u0DFF']+)([^A-Za-z0-9\u0D80-\u0DFF]*)$/);
+          if (!match) return tok;
+          const [, pre, core, post] = match;
+          const lower = core.toLowerCase();
+
+          if (mode === 'singlish' && SINGLISH_WORD_FIXES[lower]) {
+            const rep = SINGLISH_WORD_FIXES[lower];
+            fixes.push({ original: core, fixed: rep, reason: lang === 'si' ? 'Singlish පදය සිංහල Unicode බවට හරවන ලදී.' : 'Converted Singlish word to Sinhala Unicode.' });
+            return pre + rep + post;
+          }
+          if (ENGLISH_TYPO_FIXES[lower]) {
+            let rep = ENGLISH_TYPO_FIXES[lower];
+            if (/^[A-Z]/.test(core) && !rep.startsWith("I'")) rep = rep.charAt(0).toUpperCase() + rep.slice(1);
+            fixes.push({ original: core, fixed: rep, reason: lang === 'si' ? 'English අක්ෂර වින්‍යාසය නිවැරදි කරන ලදී.' : 'Fixed English spelling/apostrophe.' });
+            return pre + rep + post;
+          }
+          if (lower === 'i') {
+            if (core !== 'I') fixes.push({ original: core, fixed: 'I', reason: lang === 'si' ? 'Capital I ලෙස සකස් කරන ලදී.' : 'Capitalized pronoun I.' });
+            return pre + 'I' + post;
+          }
+          return tok;
+        });
+
+        let joined = tokens.join(' ');
+        if (/^[a-z]/.test(joined)) {
+          joined = joined.charAt(0).toUpperCase() + joined.slice(1);
+        }
+        return joined;
+      });
+
+      const correctedLyrics = cleanedLines.join('\n').replace(/\n{3,}/g, '\n\n').trim();
+      const hasSinhala = /[\u0D80-\u0DFF]/.test(correctedLyrics);
+      const hasLatin = /[A-Za-z]/.test(correctedLyrics);
+      const detectedLanguage = hasSinhala && hasLatin ? 'Sinhala + English' : hasSinhala ? 'Sinhala' : 'English';
+      const summaryNote = lang === 'si'
+        ? (fixes.length ? `Offline auto-corrector මගින් නිවැරදි කිරීම් ${fixes.length}ක් සිදු කළේය.` : 'පදවැල් සහ පේළි සැකැස්ම සුමට ලෙස පිරිසිදු කරන ලදී.')
+        : (fixes.length ? `Applied ${fixes.length} offline spelling/Singlish corrections.` : 'Cleaned line spacing and lyric formatting.');
+      return { correctedLyrics, detectedLanguage, summaryNote, corrections: fixes.slice(0, 20) };
+    }
+
+    function encodeCompactMonoWavBase64(buf, maxSec = 120) {
+      const targetSr = 16000;
+      const maxSrcFrames = Math.min(buf.length, Math.floor(maxSec * buf.sampleRate));
+      const outFrames = Math.max(1, Math.floor((maxSrcFrames * targetSr) / buf.sampleRate));
+      const dataSize = outFrames * 2;
+      const ab = new ArrayBuffer(44 + dataSize);
+      const v = new DataView(ab);
+      const ws = (o, s) => { for (let i = 0; i < s.length; i++) v.setUint8(o + i, s.charCodeAt(i)); };
+      ws(0, 'RIFF'); v.setUint32(4, 36 + dataSize, true); ws(8, 'WAVE'); ws(12, 'fmt ');
+      v.setUint32(16, 16, true); v.setUint16(20, 1, true); v.setUint16(22, 1, true);
+      v.setUint32(24, targetSr, true); v.setUint32(28, targetSr * 2, true);
+      v.setUint16(32, 2, true); v.setUint16(34, 16, true); ws(36, 'data'); v.setUint32(40, dataSize, true);
+      const ch0 = buf.getChannelData(0);
+      const ch1 = buf.numberOfChannels > 1 ? buf.getChannelData(1) : null;
+      const ratio = buf.sampleRate / targetSr;
+      let pos = 44;
+      for (let i = 0; i < outFrames; i++) {
+        const idx = Math.min(maxSrcFrames - 1, Math.floor(i * ratio));
+        const s = ch1 ? 0.5 * (ch0[idx] + ch1[idx]) : ch0[idx];
+        const c = Math.max(-1, Math.min(1, s));
+        v.setInt16(pos, c < 0 ? c * 0x8000 : c * 0x7fff, true);
+        pos += 2;
+      }
+      const bytes = new Uint8Array(ab);
+      let bin = '';
+      for (let i = 0; i < bytes.length; i += 8192) {
+        bin += String.fromCharCode(...bytes.subarray(i, i + 8192));
+      }
+      return btoa(bin);
+    }
+
+    async function callGeminiLyricsApi(apiKey, rawLyrics, wavBase64) {
+      const modeDesc = lyricMode === 'singlish'
+        ? 'Convert any Romanized Sinhala (Singlish) lines into accurate Sinhala Unicode script while preserving genuine English lyrics.'
+        : lyricMode === 'rhythm'
+        ? 'Fix spelling/grammar AND gently polish syllables, meter, and end-rhymes for singing flow.'
+        : 'Fix spelling, Sinhala Unicode orthography, English grammar, and punctuation while keeping original meaning intact.';
+      const noteLang = lang === 'si' ? 'Write summaryNote and reason in Sinhala.' : 'Write summaryNote and reason in English.';
+
+      const parts = [];
+      if (wavBase64) {
+        parts.push({ inline_data: { mime_type: 'audio/wav', data: wavBase64 } });
+        parts.push({ text: `Listen to the song vocals (${currentTrackFileName}). ${rawLyrics ? 'Cross-check and correct the draft lyrics against the audio.' : 'Transcribe the sung lyrics cleanly.'} ${modeDesc} ${noteLang}\n\nDraft lyrics:\n${rawLyrics}` });
+      } else {
+        parts.push({ text: `You are a Sinhala & English song lyricist assistant. ${modeDesc} ${noteLang}\n\nDraft lyrics:\n${rawLyrics}` });
+      }
+
+      const body = {
+        contents: [{ parts }],
+        generationConfig: {
+          responseMimeType: 'application/json',
+          responseSchema: {
+            type: 'OBJECT',
+            properties: {
+              correctedLyrics: { type: 'STRING' },
+              detectedLanguage: { type: 'STRING' },
+              summaryNote: { type: 'STRING' },
+              corrections: {
+                type: 'ARRAY',
+                items: {
+                  type: 'OBJECT',
+                  properties: {
+                    original: { type: 'STRING' },
+                    fixed: { type: 'STRING' },
+                    reason: { type: 'STRING' }
+                  },
+                  required: ['original', 'fixed', 'reason']
+                }
+              }
+            },
+            required: ['correctedLyrics', 'detectedLanguage', 'summaryNote', 'corrections']
+          }
+        }
+      };
+
+      const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash:generateContent?key=${encodeURIComponent(apiKey)}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body)
+      });
+      if (!res.ok) {
+        const errText = await res.text();
+        throw new Error(`Gemini API ${res.status}: ${errText.slice(0, 180)}`);
+      }
+      const data = await res.json();
+      const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
+      if (!text) throw new Error('Empty response from Gemini API.');
+      return JSON.parse(text);
+    }
+
+    function renderLyricModes() {
+      el('lyricModeBar').innerHTML = LYRIC_MODES.map((m) => {
+        const active = m.id === lyricMode;
+        const label = lang === 'si' ? m.si : m.en;
+        return `<button data-mode="${m.id}" type="button" class="px-3 py-1.5 rounded-lg text-xs font-medium border ${active ? 'border-amber-500 bg-amber-500/15 text-amber-300' : 'border-slate-700 bg-slate-900 text-slate-200 hover:border-amber-500'}">${label}</button>`;
+      }).join('');
+      el('lyricModeBar').querySelectorAll('button').forEach((btn) => {
+        btn.onclick = () => { lyricMode = btn.dataset.mode; renderLyricModes(); };
+      });
+    }
+
+    function showLyricResult(res) {
+      el('lyricsError').classList.add('hidden');
+      el('lyricsResultCard').classList.remove('hidden');
+      el('lyricsLangBadge').textContent = res.detectedLanguage || 'Sinhala / EN';
+      el('lyricsSummaryNote').textContent = res.summaryNote || '';
+      el('lyricsCorrectedText').textContent = res.correctedLyrics || '';
+      const fixes = res.corrections || [];
+      el('lyricsFixesList').innerHTML = fixes.length
+        ? fixes.map((f) => `<div class="bg-[#111722] rounded-lg p-2.5"><div class="text-xs font-semibold text-amber-300">${escapeHtml(f.original)} → ${escapeHtml(f.fixed)}</div><div class="text-[11px] text-slate-400 mt-0.5">${escapeHtml(f.reason || '')}</div></div>`).join('')
+        : `<div class="text-xs text-emerald-400">${lang === 'si' ? 'Lyrics දැනටමත් නිවැරදි මට්ටමක පවතී.' : 'Lyrics already look clean and well-formatted.'}</div>`;
+    }
+
+    function showLyricError(msg) {
+      el('lyricsError').textContent = msg;
+      el('lyricsError').classList.remove('hidden');
+    }
+
+    function escapeHtml(s) {
+      return String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
     }
 
     // Event bindings
@@ -456,7 +722,80 @@
       const a = document.createElement('a');
       a.href = URL.createObjectURL(new Blob([buf], { type: 'audio/wav' }));
       a.download = 'swara_studio_fixed.wav'; a.click();
-      el('exportBtn').textContent = 'හැදූ WAV ගන්න';
+      el('exportBtn').textContent = lang === 'si' ? 'හැදූ WAV ගන්න' : 'Export Fixed WAV';
+    };
+
+    // Lyrics events
+    const storedKey = localStorage.getItem('swara_gemini_key') || '';
+    el('geminiKeyInput').value = storedKey;
+    el('saveKeyBtn').onclick = () => {
+      localStorage.setItem('swara_gemini_key', el('geminiKeyInput').value.trim());
+      el('saveKeyBtn').textContent = 'Saved ✓';
+      setTimeout(() => { el('saveKeyBtn').textContent = 'Save Key'; }, 1500);
+    };
+
+    el('autoCorrectBtn').onclick = async () => {
+      const raw = el('lyricsInput').value.trim();
+      if (!raw) {
+        showLyricError(lang === 'si' ? 'කරුණාකර Lyrics ඇතුළත් කරන්න.' : 'Please enter draft lyrics.');
+        return;
+      }
+      const apiKey = el('geminiKeyInput').value.trim() || localStorage.getItem('swara_gemini_key') || '';
+      if (!apiKey) {
+        showLyricResult(offlineAutoCorrectLyrics(raw, lyricMode));
+        return;
+      }
+      el('autoCorrectBtn').disabled = true;
+      el('autoCorrectBtn').textContent = lang === 'si' ? 'නිවැරදි කරමින්...' : 'Correcting...';
+      try {
+        const res = await callGeminiLyricsApi(apiKey, raw, null);
+        showLyricResult(res);
+      } catch (err) {
+        showLyricError(err.message || 'AI correction failed');
+      } finally {
+        el('autoCorrectBtn').disabled = false;
+        el('autoCorrectBtn').textContent = 'Auto Correct Lyrics';
+      }
+    };
+
+    el('audioLyricsBtn').onclick = async () => {
+      if (!audioBuffer) return;
+      const apiKey = el('geminiKeyInput').value.trim() || localStorage.getItem('swara_gemini_key') || '';
+      if (!apiKey) {
+        showLyricError(lang === 'si'
+          ? 'Audio එකෙන් lyrics හඳුනාගැනීමට ඉහත Gemini AI Settings තුළ ඔබේ Gemini API Key එක ඇතුළත් කරන්න.'
+          : 'Enter your Gemini API Key in Gemini AI Settings above to extract and correct lyrics from audio.');
+        return;
+      }
+      el('audioLyricsBtn').disabled = true;
+      const origLabel = el('audioLyricsBtn').textContent;
+      el('audioLyricsBtn').textContent = lang === 'si' ? 'Audio පරීක්ෂා කරමින්...' : 'Analyzing audio...';
+      try {
+        const wavB64 = encodeCompactMonoWavBase64(audioBuffer, 120);
+        const res = await callGeminiLyricsApi(apiKey, el('lyricsInput').value.trim(), wavB64);
+        showLyricResult(res);
+      } catch (err) {
+        showLyricError(err.message || 'Audio lyrics extraction failed');
+      } finally {
+        el('audioLyricsBtn').disabled = false;
+        el('audioLyricsBtn').textContent = origLabel;
+      }
+    };
+
+    el('applyLyricsBtn').onclick = () => {
+      el('lyricsInput').value = el('lyricsCorrectedText').textContent;
+    };
+    el('copyLyricsBtn').onclick = async () => {
+      try {
+        await navigator.clipboard.writeText(el('lyricsCorrectedText').textContent);
+        el('copyLyricsBtn').textContent = 'Copied ✓';
+        setTimeout(() => { el('copyLyricsBtn').textContent = 'Copy'; }, 1500);
+      } catch {}
+    };
+    el('lyricsClearBtn').onclick = () => {
+      el('lyricsInput').value = '';
+      el('lyricsResultCard').classList.add('hidden');
+      el('lyricsError').classList.add('hidden');
     };
 
     [['s_hpf', 'hpf'], ['s_low', 'low'], ['s_mud', 'mud'], ['s_pres', 'pres'], ['s_deess', 'deess'], ['s_air', 'air'], ['s_thresh', 'thresh'], ['s_ratio', 'ratio'], ['s_width', 'width'], ['s_gain', 'gain']]
@@ -473,8 +812,18 @@
       el('uploadBtn').textContent = lang === 'si' ? 'ගීතයක් Upload කරන්න (MP3/WAV)' : 'Upload Song (MP3/WAV)';
       el('exportBtn').textContent = lang === 'si' ? 'හැදූ WAV ගන්න' : 'Export Fixed WAV';
       el('dropTitle').textContent = lang === 'si' ? 'ඔබේ MP3 / WAV ගීතය මෙතනට දමන්න (හෝ Click කර තෝරන්න)' : 'Drop or Click to Upload MP3 / WAV Song';
+      el('btnOrig').textContent = lang === 'si' ? 'A: මුල් ගීතය' : 'A: Original';
+      el('lyricsSubtitle').textContent = lang === 'si'
+        ? 'සිංහල, Singlish හෝ English ගීත පදවැල් ස්වයංක්‍රීයව නිවැරදි කරන්න (Browser තුළ Singlish → සිංහල + Gemini AI සඳහා optional API Key භාවිතා කළ හැක).'
+        : 'Auto-correct Sinhala, Singlish, or English lyrics in the browser (built-in Singlish → Sinhala + optional Gemini API Key for full AI & audio lyrics extraction).';
+      el('audioLyricsBtn').textContent = lang === 'si' ? 'ගීතයෙන් Lyrics ගෙන හදන්න' : 'Extract & Fix from Song';
+      el('lyricsResultTitle').textContent = lang === 'si' ? 'නිවැරදි කළ Lyrics' : 'Corrected Lyrics';
+      el('applyLyricsBtn').textContent = lang === 'si' ? 'Editor වෙත යොදන්න' : 'Apply to Editor';
+      el('lyricsFixesHeader').textContent = lang === 'si' ? 'සිදු කළ නිවැරදි කිරීම්' : 'Corrections Applied';
+      renderLyricModes();
     };
 
+    renderLyricModes();
     syncSliders();
   </script>
 </body>
