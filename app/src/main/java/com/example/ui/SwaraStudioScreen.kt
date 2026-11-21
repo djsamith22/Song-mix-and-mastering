@@ -83,9 +83,11 @@ fun SwaraStudioScreen(
     onLyricsChange: (String) -> Unit,
     onClearLyrics: () -> Unit,
     onSelectLyricMode: (com.example.ai.LyricCorrectionMode) -> Unit,
+    onToggleAutoApplyLyrics: () -> Unit,
     onAutoCorrectLyrics: () -> Unit,
     onExtractLyricsFromAudio: () -> Unit,
     onApplyCorrectedLyrics: () -> Unit,
+    onRestoreOriginalLyrics: () -> Unit,
     onLyricsCopied: () -> Unit
 ) {
     val strings = studioStrings(state.language)
@@ -247,6 +249,10 @@ fun SwaraStudioScreen(
                             ParametricEqPanel(
                                 strings = strings,
                                 params = state.params,
+                                eqCurveDb = state.eqCurveDb,
+                                bandTelemetry = state.bandTelemetry,
+                                isBypassed = state.isBypassed,
+                                isPlaying = state.isPlaying,
                                 onUpdateParams = onUpdateParams,
                                 modifier = Modifier.weight(7f)
                             )
@@ -261,6 +267,10 @@ fun SwaraStudioScreen(
                         ParametricEqPanel(
                             strings = strings,
                             params = state.params,
+                            eqCurveDb = state.eqCurveDb,
+                            bandTelemetry = state.bandTelemetry,
+                            isBypassed = state.isBypassed,
+                            isPlaying = state.isPlaying,
                             onUpdateParams = onUpdateParams
                         )
                         DynamicsPanel(
@@ -284,12 +294,16 @@ fun SwaraStudioScreen(
                         selectedMode = state.lyricMode,
                         aiState = state.lyricsAiState,
                         isAudioLoaded = state.isAudioLoaded,
+                        autoApplyEnabled = state.autoApplyCorrectedLyrics,
+                        canRestoreOriginal = state.previousLyricsBeforeAutoApply != null,
                         onLyricsChange = onLyricsChange,
                         onClearLyrics = onClearLyrics,
                         onSelectMode = onSelectLyricMode,
+                        onToggleAutoApply = onToggleAutoApplyLyrics,
                         onAutoCorrectClick = onAutoCorrectLyrics,
                         onExtractFromAudioClick = onExtractLyricsFromAudio,
                         onApplyCorrectedClick = onApplyCorrectedLyrics,
+                        onRestoreOriginalClick = onRestoreOriginalLyrics,
                         onCopied = onLyricsCopied
                     )
 

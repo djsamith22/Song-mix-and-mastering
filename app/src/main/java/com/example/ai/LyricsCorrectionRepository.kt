@@ -73,7 +73,14 @@ class LyricsCorrectionRepository {
         Firebase.ai(backend = GenerativeBackend.googleAI())
             .generativeModel(
                 modelName = "gemini-3.8-flash",
-                generationConfig = config
+                generationConfig = config,
+                systemInstruction = content {
+                    text(
+                        "You are Swara Studio's expert Sinhala, Singlish, and English song lyricist " +
+                            "and audio vocal transcriber. Always return accurate Sinhala Unicode " +
+                            "orthography, clean stanza breaks, and valid JSON matching the schema."
+                    )
+                }
             )
     }
 
@@ -114,7 +121,7 @@ class LyricsCorrectionRepository {
 
     private fun parseCorrectionJson(jsonText: String): LyricCorrectionResult {
         val root = JSONObject(jsonText)
-        val correctedLyrics = root.getString("correctedLyrics")
+        val correctedLyrics = root.optString("correctedLyrics", "").ifBlank { jsonText }
         val detectedLanguage = root.optString("detectedLanguage", "Sinhala / English")
         val summaryNote = root.optString("summaryNote", "")
         val arr = root.optJSONArray("corrections")

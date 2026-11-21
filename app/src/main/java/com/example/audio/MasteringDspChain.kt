@@ -4,13 +4,15 @@ import kotlin.math.abs
 import kotlin.math.exp
 import kotlin.math.log10
 import kotlin.math.max
+import kotlin.math.min
 import kotlin.math.pow
 
 /**
  * Full mastering DSP chain mirroring Swara Studio's Web Audio graph:
  * HPF -> Low Shelf (90 Hz) -> Mud Cut (250 Hz) -> Vocal Presence (3.2 kHz)
  * -> De-Esser (6.8 kHz) -> Air Shelf (11 kHz) -> Soft-Knee Compressor
- * -> Mid-Side Stereo Width -> Makeup Gain -> -0.6 dBFS Safety Limiter.
+ * -> Mid-Side Stereo Width -> Makeup Gain -> -0.6 dBFS Safety Limiter,
+ * plus real-time per-band energy & gain reduction metering.
  */
 class MasteringDspChain(
     private val sampleRate: Int,
@@ -25,6 +27,12 @@ class MasteringDspChain(
     private val deess = BiquadFilter(BiquadType.PEAKING, sr)
     private val air = BiquadFilter(BiquadType.HIGHSHELF, sr)
 
+    // 6-band envelope detectors for per-band real-time gain reduction overlay
+    private val bandProbes = Array(6) { BiquadFilter(BiquadType.BANDPASS, sr) }
+    private val bandEnvelopes = DoubleArray(6)
+    private val probeDecay = exp(-1.0 / (0.080 * sr))
+    private val probeAttack = exp(-1.0 / (0.010 * sr))
+
     // Compressor state (knee = 6 dB, attack = 8ms, release = 160ms)
     private val compAttackCoeff = exp(-1.0 / (0.008 * sr))
     private val compReleaseCoeff = exp(-1.0 / (0.160 * sr))
@@ -36,6 +44,7 @@ class MasteringDspChain(
     private var limEnv = 0.0
 
     // Smoothed scalar parameters to avoid zipper noise when adjusting sliders
+    @Volatile
     private var currentParams = MasteringParams()
     private var smoothedWidth = currentParams.width.toDouble()
     private var smoothedMakeup = 10.0.pow(currentParams.gain / 20.0)
@@ -43,6 +52,10 @@ class MasteringDspChain(
 
     @Volatile
     var lastGainReductionDb: Float = 0f
+        private set
+
+    @Volatile
+    var lastLimiterGrDb: Float = 0f
         private set
 
     init {
@@ -56,9 +69,12 @@ class MasteringDspChain(
         pres.reset()
         deess.reset()
         air.reset()
+        bandProbes.forEach { it.reset() }
+        bandEnvelopes.fill(0.0)
         compEnv = 0.0
         limEnv = 0.0
         lastGainReductionDb = 0f
+        lastLimiterGrDb = 0f
     }
 
     fun updateParams(params: MasteringParams) {
@@ -75,6 +91,13 @@ class MasteringDspChain(
         pres.configure(freqHz = 3200.0, q = 1.2, gainDb = p.pres.toDouble())
         deess.configure(freqHz = 6800.0, q = 2.2, gainDb = p.deess.toDouble())
         air.configure(freqHz = 11000.0, q = 0.70710678, gainDb = p.air.toDouble())
+
+        bandProbes[0].configure(freqHz = p.hpf.toDouble().coerceAtLeast(24.0), q = 1.0)
+        bandProbes[1].configure(freqHz = 90.0, q = 1.2)
+        bandProbes[2].configure(freqHz = 250.0, q = 1.4)
+        bandProbes[3].configure(freqHz = 3200.0, q = 1.2)
+        bandProbes[4].configure(freqHz = 6800.0, q = 2.0)
+        bandProbes[5].configure(freqHz = 11000.0, q = 1.2)
     }
 
     private fun computeCompressorGainDb(inputLevelDb: Double, threshDb: Double, ratio: Double, kneeDb: Double): Double {
@@ -89,17 +112,11 @@ class MasteringDspChain(
             }
             else -> {
                 val x = overshoot + halfKnee
-                val gainChange = (1.0 / ratio - 1.0) * (x * x) / (2.0 * kneeDb)
-                gainChange
+                (1.0 / ratio - 1.0) * (x * x) / (2.0 * kneeDb)
             }
         }
     }
 
-    /**
-     * Processes [frames] frames from [dryInterleaved] starting at [dryOffsetFloats]
-     * and writes final mixed output to [outInterleaved].
-     * Always processes the wet chain so live slider adjustments & GR stay smooth even when bypassed.
-     */
     fun processBlock(
         dryInterleaved: FloatArray,
         dryOffsetFloats: Int,
@@ -114,7 +131,8 @@ class MasteringDspChain(
         val thresh = p.thresh.toDouble()
         val ratio = p.ratio.toDouble()
 
-        var minGrDb = 0.0
+        var minCompGrDb = 0.0
+        var minLimGrDb = 0.0
 
         if (channels >= 2) {
             for (f in 0 until frames) {
@@ -122,6 +140,20 @@ class MasteringDspChain(
                 val dryIdx = dryOffsetFloats + idx
                 val dryL = dryInterleaved[dryIdx].toDouble()
                 val dryR = dryInterleaved[dryIdx + 1].toDouble()
+
+                // Measure per-band input energy on mono sum (every 2nd sample saves CPU with identical envelope)
+                if ((f and 1) == 0) {
+                    val mono = 0.5 * (dryL + dryR)
+                    for (b in 0 until 6) {
+                        val bp = abs(bandProbes[b].processLeft(mono))
+                        val env = bandEnvelopes[b]
+                        bandEnvelopes[b] = if (bp > env) {
+                            probeAttack * env + (1.0 - probeAttack) * bp
+                        } else {
+                            probeDecay * env + (1.0 - probeDecay) * bp
+                        }
+                    }
+                }
 
                 // 6-band EQ
                 var wL = air.processLeft(deess.processLeft(pres.processLeft(mud.processLeft(low.processLeft(hpf.processLeft(dryL))))))
@@ -136,12 +168,11 @@ class MasteringDspChain(
                 }
                 val envDb = 20.0 * log10(max(compEnv, 1e-7))
                 val grDb = computeCompressorGainDb(envDb, thresh, ratio, 6.0)
-                if (grDb < minGrDb) minGrDb = grDb
+                if (grDb < minCompGrDb) minCompGrDb = grDb
                 val compGain = 10.0.pow(grDb / 20.0)
                 wL *= compGain
                 wR *= compGain
 
-                // Smooth width & makeup
                 smoothedWidth += (targetWidth - smoothedWidth) * 0.002
                 smoothedMakeup += (targetMakeup - smoothedMakeup) * 0.002
                 bypassGain += (targetBypass - bypassGain) * 0.004
@@ -161,6 +192,7 @@ class MasteringDspChain(
                 }
                 val limEnvDb = 20.0 * log10(max(limEnv, 1e-7))
                 val limGrDb = computeCompressorGainDb(limEnvDb, -0.6, 20.0, 1.0)
+                if (limGrDb < minLimGrDb) minLimGrDb = limGrDb
                 val limGain = 10.0.pow(limGrDb / 20.0)
                 wL = (wL * limGain).coerceIn(-0.999, 0.999)
                 wR = (wR * limGain).coerceIn(-0.999, 0.999)
@@ -174,6 +206,18 @@ class MasteringDspChain(
                 val dryIdx = dryOffsetFloats + f
                 val dry = dryInterleaved[dryIdx].toDouble()
 
+                if ((f and 1) == 0) {
+                    for (b in 0 until 6) {
+                        val bp = abs(bandProbes[b].processLeft(dry))
+                        val env = bandEnvelopes[b]
+                        bandEnvelopes[b] = if (bp > env) {
+                            probeAttack * env + (1.0 - probeAttack) * bp
+                        } else {
+                            probeDecay * env + (1.0 - probeDecay) * bp
+                        }
+                    }
+                }
+
                 var w = air.processLeft(deess.processLeft(pres.processLeft(mud.processLeft(low.processLeft(hpf.processLeft(dry))))))
 
                 val peakIn = abs(w)
@@ -184,7 +228,7 @@ class MasteringDspChain(
                 }
                 val envDb = 20.0 * log10(max(compEnv, 1e-7))
                 val grDb = computeCompressorGainDb(envDb, thresh, ratio, 6.0)
-                if (grDb < minGrDb) minGrDb = grDb
+                if (grDb < minCompGrDb) minCompGrDb = grDb
                 w *= 10.0.pow(grDb / 20.0)
 
                 smoothedMakeup += (targetMakeup - smoothedMakeup) * 0.002
@@ -199,6 +243,7 @@ class MasteringDspChain(
                 }
                 val limEnvDb = 20.0 * log10(max(limEnv, 1e-7))
                 val limGrDb = computeCompressorGainDb(limEnvDb, -0.6, 20.0, 1.0)
+                if (limGrDb < minLimGrDb) minLimGrDb = limGrDb
                 w = (w * 10.0.pow(limGrDb / 20.0)).coerceIn(-0.999, 0.999)
 
                 val wetMix = 1.0 - bypassGain
@@ -206,6 +251,83 @@ class MasteringDspChain(
             }
         }
 
-        lastGainReductionDb = if (isBypassed) 0f else minGrDb.toFloat()
+        lastGainReductionDb = if (isBypassed) 0f else minCompGrDb.toFloat()
+        lastLimiterGrDb = if (isBypassed) 0f else minLimGrDb.toFloat()
+    }
+
+    /**
+     * Returns real-time per-band EQ gain + live dynamic gain reduction at each of the 6 EQ frequencies.
+     */
+    fun currentBandTelemetry(isBypassed: Boolean, isPlaying: Boolean): List<BandTelemetry> {
+        val p = currentParams
+        val bandSpecs = listOf(
+            Triple(0, "HPF", p.hpf),
+            Triple(1, "90Hz", 90f),
+            Triple(2, "250Hz", 250f),
+            Triple(3, "3.2k", 3200f),
+            Triple(4, "6.8k", 6800f),
+            Triple(5, "11k", 11000f)
+        )
+        val totalDynGr = if (isBypassed || !isPlaying) 0f else (lastGainReductionDb + lastLimiterGrDb)
+
+        return bandSpecs.map { (idx, label, freq) ->
+            val evalFreq = if (idx == 0) freq.toDouble() else freq.toDouble()
+            val eqGainDb = totalEqDbAt(evalFreq).toFloat()
+            val env = if (isPlaying) bandEnvelopes[idx] else 0.0
+            val envDb = 20.0 * log10(max(env, 1e-6))
+            // Map band energy -54 dBFS .. -6 dBFS -> 0f .. 1f
+            val levelNorm = ((envDb + 54.0) / 48.0).toFloat().coerceIn(0f, 1f)
+            // Dynamic gain reduction weighted by active energy in that band
+            val bandDynGr = if (isBypassed || !isPlaying) {
+                0f
+            } else {
+                totalDynGr * (0.25f + 0.75f * levelNorm)
+            }
+            val staticCut = min(0f, eqGainDb)
+            val totalGr = (staticCut + bandDynGr).coerceAtLeast(-18f)
+
+            BandTelemetry(
+                bandIndex = idx,
+                shortLabel = label,
+                freqHz = freq,
+                eqGainDb = eqGainDb,
+                dynamicGrDb = bandDynGr,
+                totalGrDb = totalGr,
+                levelNorm = levelNorm
+            )
+        }
+    }
+
+    fun totalEqDbAt(freqHz: Double): Double {
+        return hpf.magnitudeDbAt(freqHz) +
+            low.magnitudeDbAt(freqHz) +
+            mud.magnitudeDbAt(freqHz) +
+            pres.magnitudeDbAt(freqHz) +
+            deess.magnitudeDbAt(freqHz) +
+            air.magnitudeDbAt(freqHz)
+    }
+
+    companion object {
+        /**
+         * Static curve helper usable even before an audio file is loaded.
+         */
+        fun computeStaticCurveAndTelemetry(
+            params: MasteringParams,
+            sampleRate: Int = 44100,
+            isBypassed: Boolean = false
+        ): Pair<List<Float>, List<BandTelemetry>> {
+            val chain = MasteringDspChain(sampleRate, 2).apply {
+                updateParams(params)
+            }
+            val points = 96
+            val minLog = log10(20.0)
+            val maxLog = log10(20000.0)
+            val curve = List(points) { i ->
+                val f = 10.0.pow(minLog + (i.toDouble() / (points - 1)) * (maxLog - minLog))
+                chain.totalEqDbAt(f).toFloat()
+            }
+            val telemetry = chain.currentBandTelemetry(isBypassed = isBypassed, isPlaying = false)
+            return curve to telemetry
+        }
     }
 }

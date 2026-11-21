@@ -116,9 +116,20 @@ class DecodedAudio(
     val durationSec: Double
 )
 
+data class BandTelemetry(
+    val bandIndex: Int,
+    val shortLabel: String,
+    val freqHz: Float,
+    val eqGainDb: Float,
+    val dynamicGrDb: Float,
+    val totalGrDb: Float,
+    val levelNorm: Float
+)
+
 data class PlaybackSnapshot(
     val isPlaying: Boolean = false,
     val currentSec: Double = 0.0,
     val spectrumBins: List<Float> = List(40) { 0f },
-    val gainReductionDb: Float = 0f
+    val gainReductionDb: Float = 0f,
+    val bandTelemetry: List<BandTelemetry> = emptyList()
 )

@@ -118,6 +118,15 @@
     <section class="grid grid-cols-1 lg:grid-cols-12 gap-4">
       <div class="lg:col-span-7 bg-[#111722] border border-slate-800 rounded-xl p-5 space-y-4">
         <h2 class="text-base font-semibold border-b border-slate-800 pb-2.5">Parametric Repair EQ</h2>
+        <!-- Interactive Frequency & Real-Time Gain Reduction Overlay -->
+        <div class="bg-[#0B0F17] border border-slate-800 rounded-xl p-3 space-y-2.5">
+          <div class="flex items-center justify-between text-[11px]">
+            <span class="text-slate-400 font-medium">EQ Curve &amp; Real-Time Band GR</span>
+            <span id="eqOverlayReadout" class="font-mono text-amber-400">250Hz · -2.6 dB · GR -2.6 dB</span>
+          </div>
+          <canvas id="eqOverlayCanvas" width="640" height="156" class="w-full h-36 bg-[#080C12] border border-slate-800 rounded-lg cursor-crosshair touch-none"></canvas>
+          <div id="eqBandGrStrip" class="grid grid-cols-3 sm:grid-cols-6 gap-1.5"></div>
+        </div>
         <div class="space-y-3">
           <div>
             <div class="flex justify-between text-xs mb-1"><span>Sub-Tight High-Pass</span><span id="v_hpf" class="font-mono text-amber-400">34 Hz</span></div>
@@ -183,7 +192,12 @@
     <!-- Auto Lyrics Corrector -->
     <section class="bg-[#111722] border border-slate-800 rounded-xl p-5 space-y-4">
       <div class="flex flex-wrap items-center justify-between gap-2 border-b border-slate-800 pb-2.5">
-        <h2 id="lyricsTitle" class="text-base font-semibold text-slate-100">Auto Lyrics Corrector</h2>
+        <div class="flex flex-wrap items-center gap-2.5">
+          <h2 id="lyricsTitle" class="text-base font-semibold text-slate-100">Auto Lyrics Corrector</h2>
+          <button id="geminiApiBadge" type="button" class="px-2.5 py-0.5 rounded-md text-[11px] font-mono border border-slate-700 bg-[#0B0F17] text-slate-300 hover:border-amber-500">
+            Offline Mode · Connect API Key
+          </button>
+        </div>
         <button id="lyricsClearBtn" type="button" class="px-2.5 py-1 rounded-md text-xs font-medium text-slate-400 hover:text-white border border-slate-800 bg-[#0B0F17]">
           Clear
         </button>
@@ -194,11 +208,11 @@
       <div id="lyricModeBar" class="flex flex-wrap gap-2"></div>
 
       <!-- Optional Browser Gemini API Key -->
-      <details class="bg-[#0B0F17] border border-slate-800 rounded-lg p-3 text-xs">
-        <summary id="geminiKeySummary" class="cursor-pointer text-slate-300 font-medium">Gemini AI Settings (Optional — Browser AI / Audio Lyrics Extraction)</summary>
+      <details id="geminiSettingsDetails" class="bg-[#0B0F17] border border-slate-800 rounded-lg p-3 text-xs">
+        <summary id="geminiKeySummary" class="cursor-pointer text-slate-300 font-medium">Gemini AI Settings (Browser API Key / Audio Lyrics Extraction)</summary>
         <div class="mt-3 flex flex-col sm:flex-row gap-2">
-          <input id="geminiKeyInput" type="password" placeholder="Optional Gemini API Key (saved only in your browser)" class="flex-1 bg-[#111722] border border-slate-700 rounded-lg px-3 py-2 text-xs text-slate-100 focus:outline-none focus:border-amber-500" />
-          <button id="saveKeyBtn" type="button" class="px-3 py-2 rounded-lg text-xs font-medium bg-slate-800 hover:bg-slate-700 text-slate-200">Save Key</button>
+          <input id="geminiKeyInput" type="password" placeholder="Paste Gemini API Key (saved only in your browser)" class="flex-1 bg-[#111722] border border-slate-700 rounded-lg px-3 py-2 text-xs text-slate-100 focus:outline-none focus:border-amber-500" />
+          <button id="saveKeyBtn" type="button" class="px-3 py-2 rounded-lg text-xs font-medium bg-amber-500 hover:bg-amber-400 text-slate-950 font-semibold">Save Key</button>
         </div>
         <p id="geminiKeyHint" class="text-[11px] text-slate-400 mt-2">API key නොමැතිව වුවද built-in Singlish → සිංහල සහ spelling/formatting auto-corrector ක්‍රියාත්මක වේ. Audio වලින් lyrics ගැනීමට සහ AI Grammar/Rhyme polish සඳහා ඔබේ Gemini API key එක එක් කරන්න.</p>
       </details>
@@ -206,7 +220,12 @@
       <!-- Draft Input -->
       <textarea id="lyricsInput" rows="5" placeholder="ඔබේ ගීතයේ Lyrics මෙහි type හෝ paste කරන්න...&#10;(උදා: Mage hitha laga inna oya...)" class="w-full bg-[#0B0F17] border border-slate-800 focus:border-amber-500 rounded-xl p-3.5 text-sm text-slate-100 leading-relaxed focus:outline-none"></textarea>
 
-      <!-- Action Buttons -->
+      <!-- Auto-apply toggle & Action Buttons -->
+      <label class="flex items-center justify-between gap-3 bg-[#0B0F17] border border-slate-800 rounded-lg px-3 py-2 text-xs text-slate-300 cursor-pointer">
+        <span id="autoApplyLabel">නිවැරදි කළ වහාම Editor වෙත යොදන්න</span>
+        <input id="autoApplyCheck" type="checkbox" checked class="accent-amber-500 w-4 h-4" />
+      </label>
+
       <div class="flex flex-wrap items-center gap-2.5">
         <button id="autoCorrectBtn" type="button" class="px-4 py-2 rounded-lg text-xs font-semibold bg-amber-500 hover:bg-amber-400 text-slate-950">
           Auto Correct Lyrics
@@ -278,6 +297,9 @@
     const el = (id) => document.getElementById(id);
     const fmtTime = (s) => `${Math.floor(s / 60)}:${Math.floor(s % 60).toString().padStart(2, '0')}`;
 
+    let selectedEqBand = 2;
+    let draggingEqBand = -1;
+
     function syncSliders() {
       el('s_hpf').value = params.hpf; el('v_hpf').textContent = `${params.hpf} Hz`;
       el('s_low').value = params.low; el('v_low').textContent = `${params.low >= 0 ? '+' : ''}${params.low.toFixed(1)} dB`;
@@ -290,6 +312,7 @@
       el('s_width').value = params.width; el('v_width').textContent = `${params.width.toFixed(2)} x`;
       el('s_gain').value = params.gain; el('v_gain').textContent = `${params.gain >= 0 ? '+' : ''}${params.gain.toFixed(1)} dB`;
       if (chain) chain.update(params);
+      drawEqOverlay();
     }
 
     function buildChain(ctx, p, channels) {
@@ -337,7 +360,7 @@
         makeup.gain.setTargetAtTime(Math.pow(10, nx.gain / 20), t, 0.02);
       };
       update(p);
-      return { input: hpf, output: lim, comp, update };
+      return { input: hpf, output: lim, comp, lim, update };
     }
 
     function measureBand(samples, sr, type, freq, q) {
@@ -400,13 +423,186 @@
       el('timeDisplay').textContent = `${fmtTime(cur)} / ${fmtTime(audioBuffer.duration)}`;
     }
 
+    function biquadMagDb(type, freq, q, gainDb, evalFreq, sr = 44100) {
+      const w0 = (2 * Math.PI * Math.min(freq, sr * 0.45)) / sr;
+      const cosW0 = Math.cos(w0), sinW0 = Math.sin(w0), alpha = sinW0 / (2 * q);
+      let b0 = 1, b1 = 0, b2 = 0, a0 = 1, a1 = 0, a2 = 0;
+      const A = Math.pow(10, gainDb / 40);
+      if (type === 'highpass') {
+        b0 = (1 + cosW0) / 2; b1 = -(1 + cosW0); b2 = (1 + cosW0) / 2;
+        a0 = 1 + alpha; a1 = -2 * cosW0; a2 = 1 - alpha;
+      } else if (type === 'peaking') {
+        b0 = 1 + alpha * A; b1 = -2 * cosW0; b2 = 1 - alpha * A;
+        a0 = 1 + alpha / A; a1 = -2 * cosW0; a2 = 1 - alpha / A;
+      } else if (type === 'lowshelf') {
+        const sA = Math.sqrt(A) * sinW0 * Math.SQRT2;
+        b0 = A * ((A + 1) - (A - 1) * cosW0 + sA); b1 = 2 * A * ((A - 1) - (A + 1) * cosW0); b2 = A * ((A + 1) - (A - 1) * cosW0 - sA);
+        a0 = (A + 1) + (A - 1) * cosW0 + sA; a1 = -2 * ((A - 1) + (A + 1) * cosW0); a2 = (A + 1) + (A - 1) * cosW0 - sA;
+      } else if (type === 'highshelf') {
+        const sA = Math.sqrt(A) * sinW0 * Math.SQRT2;
+        b0 = A * ((A + 1) + (A - 1) * cosW0 + sA); b1 = -2 * A * ((A - 1) + (A + 1) * cosW0); b2 = A * ((A + 1) + (A - 1) * cosW0 - sA);
+        a0 = (A + 1) - (A - 1) * cosW0 + sA; a1 = 2 * ((A - 1) - (A + 1) * cosW0); a2 = (A + 1) - (A - 1) * cosW0 - sA;
+      }
+      const w = (2 * Math.PI * Math.min(evalFreq, sr * 0.49)) / sr;
+      const cw = Math.cos(w), sw = Math.sin(w), c2w = Math.cos(2 * w), s2w = Math.sin(2 * w);
+      const nb0 = b0 / a0, nb1 = b1 / a0, nb2 = b2 / a0, na1 = a1 / a0, na2 = a2 / a0;
+      const nR = nb0 + nb1 * cw + nb2 * c2w, nI = -nb1 * sw - nb2 * s2w;
+      const dR = 1 + na1 * cw + na2 * c2w, dI = -na1 * sw - na2 * s2w;
+      return 10 * Math.log10(Math.max(1e-12, (nR * nR + nI * nI) / Math.max(1e-18, dR * dR + dI * dI)));
+    }
+
+    function totalEqDbAt(f) {
+      const sr = audioBuffer ? audioBuffer.sampleRate : 44100;
+      return (
+        biquadMagDb('highpass', params.hpf, 0.7071, 0, f, sr) +
+        biquadMagDb('lowshelf', 90, 0.7071, params.low, f, sr) +
+        biquadMagDb('peaking', 250, 1.4, params.mud, f, sr) +
+        biquadMagDb('peaking', 3200, 1.2, params.pres, f, sr) +
+        biquadMagDb('peaking', 6800, 2.2, params.deess, f, sr) +
+        biquadMagDb('highshelf', 11000, 0.7071, params.air, f, sr)
+      );
+    }
+
+    function drawEqOverlay(freqData = null) {
+      const c = el('eqOverlayCanvas');
+      if (!c) return;
+      const ctx = c.getContext('2d');
+      const w = c.width, h = c.height;
+      ctx.clearRect(0, 0, w, h);
+
+      const minF = 20, maxF = 20000, minDb = -12, maxDb = 9;
+      const logMin = Math.log10(minF), logMax = Math.log10(maxF);
+      const fToX = (f) => ((Math.log10(Math.max(minF, Math.min(maxF, f))) - logMin) / (logMax - logMin)) * w;
+      const dbToY = (db) => ((maxDb - Math.max(minDb, Math.min(maxDb, db))) / (maxDb - minDb)) * h;
+      const zeroY = dbToY(0);
+
+      // Grid lines
+      ctx.lineWidth = 1;
+      [30, 90, 250, 1000, 3200, 6800, 11000].forEach((gf) => {
+        const gx = fToX(gf);
+        ctx.strokeStyle = 'rgba(30,41,59,0.7)';
+        ctx.beginPath(); ctx.moveTo(gx, 0); ctx.lineTo(gx, h); ctx.stroke();
+      });
+      [6, 0, -6].forEach((rdb) => {
+        const ry = dbToY(rdb);
+        ctx.strokeStyle = rdb === 0 ? '#334155' : 'rgba(30,41,59,0.5)';
+        ctx.setLineDash(rdb === 0 ? [] : [4, 4]);
+        ctx.beginPath(); ctx.moveTo(0, ry); ctx.lineTo(w, ry); ctx.stroke();
+      });
+      ctx.setLineDash([]);
+
+      const sr = audioCtx ? audioCtx.sampleRate : (audioBuffer ? audioBuffer.sampleRate : 44100);
+      const dynGr = (!isBypassed && isPlaying && chain) ? (chain.comp.reduction + (chain.lim ? chain.lim.reduction : 0)) : 0;
+
+      const bands = [
+        { idx: 0, label: 'HPF', freq: params.hpf, eqDb: totalEqDbAt(params.hpf), nodeDb: totalEqDbAt(params.hpf) },
+        { idx: 1, label: '90Hz', freq: 90, eqDb: totalEqDbAt(90), nodeDb: params.low },
+        { idx: 2, label: '250Hz', freq: 250, eqDb: totalEqDbAt(250), nodeDb: params.mud },
+        { idx: 3, label: '3.2k', freq: 3200, eqDb: totalEqDbAt(3200), nodeDb: params.pres },
+        { idx: 4, label: '6.8k', freq: 6800, eqDb: totalEqDbAt(6800), nodeDb: params.deess },
+        { idx: 5, label: '11k', freq: 11000, eqDb: totalEqDbAt(11000), nodeDb: params.air }
+      ];
+
+      // Per-band live energy + Gain Reduction drop bars
+      const barW = 16;
+      bands.forEach((b) => {
+        let levelNorm = 0;
+        if (freqData && isPlaying) {
+          const bin = Math.max(0, Math.min(freqData.length - 1, Math.round((b.freq / (sr / 2)) * freqData.length)));
+          levelNorm = freqData[bin] / 255;
+        }
+        const bandDynGr = (!isBypassed && isPlaying) ? dynGr * (0.25 + 0.75 * levelNorm) : 0;
+        const staticCut = Math.min(0, b.eqDb);
+        b.totalGr = Math.max(-18, staticCut + bandDynGr);
+
+        const cx = fToX(b.freq);
+        if (isPlaying && levelNorm > 0.02) {
+          const eH = levelNorm * (h * 0.45);
+          ctx.fillStyle = 'rgba(52,211,153,0.16)';
+          ctx.fillRect(cx - barW * 0.75, h - eH, barW * 1.5, eH);
+        }
+
+        if (!isBypassed && b.totalGr < -0.15) {
+          const grY = dbToY(b.totalGr);
+          const dropH = Math.max(2, grY - zeroY);
+          const grad = ctx.createLinearGradient(0, zeroY, 0, zeroY + dropH);
+          grad.addColorStop(0, 'rgba(251,113,133,0.55)');
+          grad.addColorStop(1, 'rgba(245,158,11,0.20)');
+          ctx.fillStyle = grad;
+          ctx.fillRect(cx - barW / 2, zeroY, barW, dropH);
+          ctx.strokeStyle = '#fb7185';
+          ctx.lineWidth = 2;
+          ctx.beginPath(); ctx.moveTo(cx - barW / 2, zeroY + dropH); ctx.lineTo(cx + barW / 2, zeroY + dropH); ctx.stroke();
+        }
+      });
+
+      // Combined EQ curve
+      const curveColor = isBypassed ? '#94a3b8' : '#f59e0b';
+      ctx.beginPath();
+      const pts = 96;
+      for (let i = 0; i < pts; i++) {
+        const f = Math.pow(10, logMin + (i / (pts - 1)) * (logMax - logMin));
+        const x = fToX(f), y = dbToY(totalEqDbAt(f));
+        if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+      }
+      ctx.strokeStyle = curveColor;
+      ctx.lineWidth = 2;
+      ctx.stroke();
+
+      ctx.lineTo(w, zeroY); ctx.lineTo(0, zeroY); ctx.closePath();
+      const cGrad = ctx.createLinearGradient(0, 0, 0, h);
+      cGrad.addColorStop(0, isBypassed ? 'rgba(148,163,184,0.18)' : 'rgba(245,158,11,0.22)');
+      cGrad.addColorStop(1, 'rgba(245,158,11,0.03)');
+      ctx.fillStyle = cGrad;
+      ctx.fill();
+
+      // 6 Interactive nodes
+      bands.forEach((b) => {
+        const nx = fToX(b.freq), ny = dbToY(b.nodeDb);
+        const sel = b.idx === selectedEqBand;
+        if (sel) {
+          ctx.beginPath(); ctx.arc(nx, ny, 12, 0, Math.PI * 2);
+          ctx.fillStyle = isBypassed ? 'rgba(148,163,184,0.2)' : 'rgba(245,158,11,0.25)';
+          ctx.fill();
+        }
+        ctx.beginPath(); ctx.arc(nx, ny, sel ? 6.5 : 4.5, 0, Math.PI * 2);
+        ctx.fillStyle = '#0B0F17'; ctx.fill();
+        ctx.lineWidth = 2;
+        ctx.strokeStyle = sel ? '#fef3c7' : curveColor;
+        ctx.stroke();
+      });
+
+      const active = bands[selectedEqBand] || bands[2];
+      const eqText = active.idx === 0 ? `${Math.round(params.hpf)} Hz` : `${active.eqDb >= 0 ? '+' : ''}${active.eqDb.toFixed(1)} dB`;
+      const readoutEl = el('eqOverlayReadout');
+      if (readoutEl) {
+        readoutEl.textContent = `${active.label} · ${eqText} · GR ${(isBypassed ? 0 : active.totalGr).toFixed(1)} dB`;
+        readoutEl.className = `font-mono ${(!isBypassed && active.totalGr < -0.2) ? 'text-rose-400' : 'text-amber-400'}`;
+      }
+
+      const strip = el('eqBandGrStrip');
+      if (strip) {
+        strip.innerHTML = bands.map((b) => {
+          const sel = b.idx === selectedEqBand;
+          const grVal = (isBypassed ? 0 : b.totalGr).toFixed(1);
+          const hasGr = !isBypassed && b.totalGr < -0.15;
+          return `<button data-band="${b.idx}" type="button" class="px-2 py-1 rounded-md border text-center ${sel ? 'border-amber-500 bg-amber-500/15' : 'border-slate-800 bg-[#111722]'}"><div class="font-mono text-[10px] text-slate-400">${b.label}</div><div class="font-mono text-[11px] font-semibold ${hasGr ? 'text-rose-400' : 'text-slate-100'}">${grVal} dB</div></button>`;
+        }).join('');
+        strip.querySelectorAll('button').forEach((btn) => {
+          btn.onclick = () => { selectedEqBand = parseInt(btn.dataset.band, 10); drawEqOverlay(freqData); };
+        });
+      }
+    }
+
     function drawLoop() {
       drawWave();
       const sc = el('specCanvas'), sctx = sc.getContext('2d');
       sctx.clearRect(0, 0, sc.width, sc.height);
+      let freqData = null;
       if (analyser && isPlaying) {
         const bins = 40, data = new Uint8Array(analyser.frequencyBinCount);
         analyser.getByteFrequencyData(data);
+        freqData = data;
         const bw = sc.width / bins;
         for (let i = 0; i < bins; i++) {
           const idx = Math.floor(Math.pow(i / bins, 1.8) * data.length * 0.7);
@@ -416,6 +612,7 @@
         }
         if (chain) el('grDisplay').textContent = `GR: ${(isBypassed ? 0 : chain.comp.reduction).toFixed(1)} dB`;
       }
+      drawEqOverlay(freqData);
       if (isPlaying) requestAnimationFrame(drawLoop);
     }
 
@@ -683,6 +880,7 @@
       el('btnFixed').className = 'px-3 py-1 rounded-md text-xs font-medium text-slate-400';
       if (audioCtx && dryGain && wetGain) { dryGain.gain.setTargetAtTime(1, audioCtx.currentTime, 0.015); wetGain.gain.setTargetAtTime(0, audioCtx.currentTime, 0.015); }
       drawWave();
+      drawEqOverlay();
     };
     el('btnFixed').onclick = () => {
       isBypassed = false;
@@ -690,7 +888,47 @@
       el('btnOrig').className = 'px-3 py-1 rounded-md text-xs font-medium text-slate-400';
       if (audioCtx && dryGain && wetGain) { dryGain.gain.setTargetAtTime(0, audioCtx.currentTime, 0.015); wetGain.gain.setTargetAtTime(1, audioCtx.currentTime, 0.015); }
       drawWave();
+      drawEqOverlay();
     };
+
+    // Interactive EQ overlay pointer dragging
+    (() => {
+      const c = el('eqOverlayCanvas');
+      const minF = 20, maxF = 20000, minDb = -12, maxDb = 9;
+      const logMin = Math.log10(minF), logMax = Math.log10(maxF);
+      const getBandFreqs = () => [params.hpf, 90, 250, 3200, 6800, 11000];
+      const fToX = (f, w) => ((Math.log10(Math.max(minF, Math.min(maxF, f))) - logMin) / (logMax - logMin)) * w;
+      const xToF = (x, w) => Math.pow(10, logMin + Math.max(0, Math.min(1, x / w)) * (logMax - logMin));
+      const yToDb = (y, h) => maxDb - Math.max(0, Math.min(1, y / h)) * (maxDb - minDb);
+      const snap = (v, minV, maxV, step) => Math.max(minV, Math.min(maxV, Math.round(v / step) * step));
+
+      const applyDrag = (clientX, clientY) => {
+        const r = c.getBoundingClientRect();
+        const x = clientX - r.left, y = clientY - r.top;
+        if (draggingEqBand === 0) params.hpf = snap(xToF(x, r.width), 20, 90, 2);
+        else if (draggingEqBand === 1) params.low = snap(yToDb(y, r.height), -6, 6, 0.2);
+        else if (draggingEqBand === 2) params.mud = snap(yToDb(y, r.height), -6, 4, 0.2);
+        else if (draggingEqBand === 3) params.pres = snap(yToDb(y, r.height), -4, 6, 0.2);
+        else if (draggingEqBand === 4) params.deess = snap(yToDb(y, r.height), -6, 3, 0.2);
+        else if (draggingEqBand === 5) params.air = snap(yToDb(y, r.height), -4, 6, 0.2);
+        syncSliders();
+      };
+
+      c.addEventListener('pointerdown', (e) => {
+        const r = c.getBoundingClientRect();
+        const x = e.clientX - r.left;
+        const freqs = getBandFreqs();
+        let best = 0, bestD = Infinity;
+        freqs.forEach((f, idx) => { const d = Math.abs(x - fToX(f, r.width)); if (d < bestD) { bestD = d; best = idx; } });
+        selectedEqBand = best;
+        draggingEqBand = best;
+        c.setPointerCapture(e.pointerId);
+        applyDrag(e.clientX, e.clientY);
+      });
+      c.addEventListener('pointermove', (e) => { if (draggingEqBand >= 0) applyDrag(e.clientX, e.clientY); });
+      c.addEventListener('pointerup', () => { draggingEqBand = -1; });
+      c.addEventListener('pointercancel', () => { draggingEqBand = -1; });
+    })();
     el('waveCanvas').onclick = (e) => {
       if (!audioBuffer) return;
       const r = e.target.getBoundingClientRect();
@@ -725,11 +963,32 @@
       el('exportBtn').textContent = lang === 'si' ? 'හැදූ WAV ගන්න' : 'Export Fixed WAV';
     };
 
+    function updateGeminiBadge() {
+      const key = (el('geminiKeyInput').value || localStorage.getItem('swara_gemini_key') || '').trim();
+      const badge = el('geminiApiBadge');
+      if (!badge) return;
+      if (key) {
+        badge.textContent = lang === 'si' ? 'Gemini API සම්බන්ධයි ✓' : 'Gemini API Connected ✓';
+        badge.className = 'px-2.5 py-0.5 rounded-md text-[11px] font-mono border border-emerald-500/50 bg-emerald-600/15 text-emerald-300';
+      } else {
+        badge.textContent = lang === 'si' ? 'Offline Mode · API Key එක් කරන්න' : 'Offline Mode · Connect API Key';
+        badge.className = 'px-2.5 py-0.5 rounded-md text-[11px] font-mono border border-amber-500/40 bg-amber-500/10 text-amber-300 hover:border-amber-400';
+      }
+    }
+
     // Lyrics events
     const storedKey = localStorage.getItem('swara_gemini_key') || '';
     el('geminiKeyInput').value = storedKey;
+    updateGeminiBadge();
+
+    el('geminiApiBadge').onclick = () => {
+      const d = el('geminiSettingsDetails');
+      if (d) { d.open = !d.open; if (d.open) el('geminiKeyInput').focus(); }
+    };
+
     el('saveKeyBtn').onclick = () => {
       localStorage.setItem('swara_gemini_key', el('geminiKeyInput').value.trim());
+      updateGeminiBadge();
       el('saveKeyBtn').textContent = 'Saved ✓';
       setTimeout(() => { el('saveKeyBtn').textContent = 'Save Key'; }, 1500);
     };
@@ -742,7 +1001,9 @@
       }
       const apiKey = el('geminiKeyInput').value.trim() || localStorage.getItem('swara_gemini_key') || '';
       if (!apiKey) {
-        showLyricResult(offlineAutoCorrectLyrics(raw, lyricMode));
+        const offlineRes = offlineAutoCorrectLyrics(raw, lyricMode);
+        showLyricResult(offlineRes);
+        if (el('autoApplyCheck')?.checked && offlineRes.correctedLyrics) el('lyricsInput').value = offlineRes.correctedLyrics;
         return;
       }
       el('autoCorrectBtn').disabled = true;
@@ -750,6 +1011,7 @@
       try {
         const res = await callGeminiLyricsApi(apiKey, raw, null);
         showLyricResult(res);
+        if (el('autoApplyCheck')?.checked && res.correctedLyrics) el('lyricsInput').value = res.correctedLyrics;
       } catch (err) {
         showLyricError(err.message || 'AI correction failed');
       } finally {
@@ -762,6 +1024,8 @@
       if (!audioBuffer) return;
       const apiKey = el('geminiKeyInput').value.trim() || localStorage.getItem('swara_gemini_key') || '';
       if (!apiKey) {
+        const d = el('geminiSettingsDetails');
+        if (d) d.open = true;
         showLyricError(lang === 'si'
           ? 'Audio එකෙන් lyrics හඳුනාගැනීමට ඉහත Gemini AI Settings තුළ ඔබේ Gemini API Key එක ඇතුළත් කරන්න.'
           : 'Enter your Gemini API Key in Gemini AI Settings above to extract and correct lyrics from audio.');
@@ -774,6 +1038,7 @@
         const wavB64 = encodeCompactMonoWavBase64(audioBuffer, 120);
         const res = await callGeminiLyricsApi(apiKey, el('lyricsInput').value.trim(), wavB64);
         showLyricResult(res);
+        if (el('autoApplyCheck')?.checked && res.correctedLyrics) el('lyricsInput').value = res.correctedLyrics;
       } catch (err) {
         showLyricError(err.message || 'Audio lyrics extraction failed');
       } finally {
@@ -820,6 +1085,8 @@
       el('lyricsResultTitle').textContent = lang === 'si' ? 'නිවැරදි කළ Lyrics' : 'Corrected Lyrics';
       el('applyLyricsBtn').textContent = lang === 'si' ? 'Editor වෙත යොදන්න' : 'Apply to Editor';
       el('lyricsFixesHeader').textContent = lang === 'si' ? 'සිදු කළ නිවැරදි කිරීම්' : 'Corrections Applied';
+      if (el('autoApplyLabel')) el('autoApplyLabel').textContent = lang === 'si' ? 'නිවැරදි කළ වහාම Editor වෙත යොදන්න' : 'Auto-apply to editor';
+      updateGeminiBadge();
       renderLyricModes();
     };
 

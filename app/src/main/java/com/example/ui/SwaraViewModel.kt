@@ -42,6 +42,8 @@ data class SwaraUiState(
     val waveformPeaks: List<Float> = emptyList(),
     val spectrumBins: List<Float> = List(40) { 0f },
     val gainReductionDb: Float = 0f,
+    val eqCurveDb: List<Float> = emptyList(),
+    val bandTelemetry: List<com.example.audio.BandTelemetry> = emptyList(),
     val params: MasteringParams = MASTERING_PRESETS.first().params,
     val activePresetId: String? = MASTERING_PRESETS.first().id,
     val auditMetrics: DiagnosticMetrics? = null,
@@ -49,6 +51,8 @@ data class SwaraUiState(
     val isBannerError: Boolean = false,
     // Auto Lyrics Corrector state
     val lyricsDraft: String = "",
+    val previousLyricsBeforeAutoApply: String? = null,
+    val autoApplyCorrectedLyrics: Boolean = true,
     val lyricMode: LyricCorrectionMode = LyricCorrectionMode.SPELLING_GRAMMAR,
     val lyricsAiState: LyricsAiState = LyricsAiState.Idle
 )
@@ -58,7 +62,16 @@ class SwaraViewModel(application: Application) : AndroidViewModel(application) {
     private val lyricsRepository = LyricsCorrectionRepository()
     private var loadedAudio: DecodedAudio? = null
 
-    private val _uiState = MutableStateFlow(SwaraUiState())
+    private val _uiState = MutableStateFlow(
+        SwaraUiState().let { initial ->
+            val (curve, telemetry) = com.example.audio.MasteringDspChain.computeStaticCurveAndTelemetry(
+                params = initial.params,
+                sampleRate = 44100,
+                isBypassed = initial.isBypassed
+            )
+            initial.copy(eqCurveDb = curve, bandTelemetry = telemetry)
+        }
+    )
     val uiState: StateFlow<SwaraUiState> = _uiState.asStateFlow()
 
     init {
@@ -69,7 +82,12 @@ class SwaraViewModel(application: Application) : AndroidViewModel(application) {
                         isPlaying = snap.isPlaying,
                         currentSec = snap.currentSec,
                         spectrumBins = snap.spectrumBins,
-                        gainReductionDb = snap.gainReductionDb
+                        gainReductionDb = snap.gainReductionDb,
+                        bandTelemetry = if (snap.bandTelemetry.isNotEmpty()) {
+                            snap.bandTelemetry
+                        } else {
+                            state.bandTelemetry
+                        }
                     )
                 }
             }
@@ -140,7 +158,18 @@ class SwaraViewModel(application: Application) : AndroidViewModel(application) {
 
     fun setBypass(bypassed: Boolean) {
         playbackEngine.setBypassed(bypassed)
-        _uiState.update { it.copy(isBypassed = bypassed) }
+        _uiState.update { state ->
+            val (curve, staticTelemetry) = com.example.audio.MasteringDspChain.computeStaticCurveAndTelemetry(
+                params = state.params,
+                sampleRate = loadedAudio?.sampleRate ?: 44100,
+                isBypassed = bypassed
+            )
+            state.copy(
+                isBypassed = bypassed,
+                eqCurveDb = curve,
+                bandTelemetry = if (state.isPlaying) state.bandTelemetry else staticTelemetry
+            )
+        }
     }
 
     fun seekFraction(fraction: Float) {
@@ -151,10 +180,17 @@ class SwaraViewModel(application: Application) : AndroidViewModel(application) {
 
     fun selectPreset(preset: MasteringPreset) {
         playbackEngine.updateParams(preset.params)
-        _uiState.update {
-            it.copy(
+        _uiState.update { state ->
+            val (curve, staticTelemetry) = com.example.audio.MasteringDspChain.computeStaticCurveAndTelemetry(
                 params = preset.params,
-                activePresetId = preset.id
+                sampleRate = loadedAudio?.sampleRate ?: 44100,
+                isBypassed = state.isBypassed
+            )
+            state.copy(
+                params = preset.params,
+                activePresetId = preset.id,
+                eqCurveDb = curve,
+                bandTelemetry = if (state.isPlaying) state.bandTelemetry else staticTelemetry
             )
         }
     }
@@ -163,9 +199,16 @@ class SwaraViewModel(application: Application) : AndroidViewModel(application) {
         _uiState.update { state ->
             val updated = transform(state.params)
             playbackEngine.updateParams(updated)
+            val (curve, staticTelemetry) = com.example.audio.MasteringDspChain.computeStaticCurveAndTelemetry(
+                params = updated,
+                sampleRate = loadedAudio?.sampleRate ?: 44100,
+                isBypassed = state.isBypassed
+            )
             state.copy(
                 params = updated,
-                activePresetId = MASTERING_PRESETS.firstOrNull { it.params == updated }?.id
+                activePresetId = MASTERING_PRESETS.firstOrNull { it.params == updated }?.id,
+                eqCurveDb = curve,
+                bandTelemetry = if (state.isPlaying) state.bandTelemetry else staticTelemetry
             )
         }
     }
@@ -178,6 +221,7 @@ class SwaraViewModel(application: Application) : AndroidViewModel(application) {
         _uiState.update {
             it.copy(
                 lyricsDraft = "",
+                previousLyricsBeforeAutoApply = null,
                 lyricsAiState = LyricsAiState.Idle
             )
         }
@@ -185,6 +229,20 @@ class SwaraViewModel(application: Application) : AndroidViewModel(application) {
 
     fun selectLyricMode(mode: LyricCorrectionMode) {
         _uiState.update { it.copy(lyricMode = mode) }
+    }
+
+    fun toggleAutoApplyLyrics() {
+        _uiState.update { it.copy(autoApplyCorrectedLyrics = !it.autoApplyCorrectedLyrics) }
+    }
+
+    fun restoreOriginalLyrics() {
+        val prev = _uiState.value.previousLyricsBeforeAutoApply ?: return
+        _uiState.update {
+            it.copy(
+                lyricsDraft = prev,
+                previousLyricsBeforeAutoApply = null
+            )
+        }
     }
 
     fun autoCorrectLyrics() {
@@ -206,7 +264,14 @@ class SwaraViewModel(application: Application) : AndroidViewModel(application) {
                     uiLanguage = snapshot.language,
                     trackName = snapshot.trackName
                 )
-                _uiState.update { it.copy(lyricsAiState = LyricsAiState.Success(result)) }
+                _uiState.update { state ->
+                    val shouldAutoApply = state.autoApplyCorrectedLyrics
+                    state.copy(
+                        previousLyricsBeforeAutoApply = if (shouldAutoApply) snapshot.lyricsDraft else state.previousLyricsBeforeAutoApply,
+                        lyricsDraft = if (shouldAutoApply) result.correctedLyrics else state.lyricsDraft,
+                        lyricsAiState = LyricsAiState.Success(result)
+                    )
+                }
             } catch (e: TimeoutCancellationException) {
                 Log.e(TAG, "Auto-correct lyrics timed out", e)
                 _uiState.update {
@@ -243,7 +308,14 @@ class SwaraViewModel(application: Application) : AndroidViewModel(application) {
                     mode = snapshot.lyricMode,
                     uiLanguage = snapshot.language
                 )
-                _uiState.update { it.copy(lyricsAiState = LyricsAiState.Success(result)) }
+                _uiState.update { state ->
+                    val shouldAutoApply = state.autoApplyCorrectedLyrics
+                    state.copy(
+                        previousLyricsBeforeAutoApply = if (shouldAutoApply) snapshot.lyricsDraft else state.previousLyricsBeforeAutoApply,
+                        lyricsDraft = if (shouldAutoApply) result.correctedLyrics else state.lyricsDraft,
+                        lyricsAiState = LyricsAiState.Success(result)
+                    )
+                }
             } catch (e: TimeoutCancellationException) {
                 Log.e(TAG, "Audio lyrics correction timed out", e)
                 _uiState.update {
@@ -266,8 +338,11 @@ class SwaraViewModel(application: Application) : AndroidViewModel(application) {
 
     fun applyCorrectedLyrics() {
         val successState = _uiState.value.lyricsAiState as? LyricsAiState.Success ?: return
-        _uiState.update {
-            it.copy(lyricsDraft = successState.result.correctedLyrics)
+        _uiState.update { state ->
+            state.copy(
+                previousLyricsBeforeAutoApply = state.lyricsDraft,
+                lyricsDraft = successState.result.correctedLyrics
+            )
         }
     }
 

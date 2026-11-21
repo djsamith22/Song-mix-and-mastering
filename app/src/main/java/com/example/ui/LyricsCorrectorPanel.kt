@@ -4,6 +4,7 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
@@ -13,12 +14,14 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AutoFixHigh
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.DeleteOutline
+import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.MusicNote
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -28,6 +31,8 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
+import androidx.compose.material3.Switch
+import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.minimumInteractiveComponentSize
@@ -57,12 +62,16 @@ fun LyricsCorrectorPanel(
     selectedMode: LyricCorrectionMode,
     aiState: LyricsAiState,
     isAudioLoaded: Boolean,
+    autoApplyEnabled: Boolean,
+    canRestoreOriginal: Boolean,
     onLyricsChange: (String) -> Unit,
     onClearLyrics: () -> Unit,
     onSelectMode: (LyricCorrectionMode) -> Unit,
+    onToggleAutoApply: () -> Unit,
     onAutoCorrectClick: () -> Unit,
     onExtractFromAudioClick: () -> Unit,
     onApplyCorrectedClick: () -> Unit,
+    onRestoreOriginalClick: () -> Unit,
     onCopied: () -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -83,24 +92,53 @@ fun LyricsCorrectorPanel(
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                modifier = Modifier.weight(1f)
+            Column(
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.spacedBy(6.dp)
             ) {
-                Icon(
-                    imageVector = Icons.Filled.AutoFixHigh,
-                    contentDescription = null,
-                    tint = StudioColors.Amber,
-                    modifier = Modifier.size(18.dp)
-                )
-                Text(
-                    text = strings.lyricsTitle,
-                    fontFamily = StudioSansFontFamily,
-                    fontWeight = FontWeight.SemiBold,
-                    fontSize = 16.sp,
-                    color = StudioColors.TextPrimary
-                )
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Filled.AutoFixHigh,
+                        contentDescription = null,
+                        tint = StudioColors.Amber,
+                        modifier = Modifier.size(18.dp)
+                    )
+                    Text(
+                        text = strings.lyricsTitle,
+                        fontFamily = StudioSansFontFamily,
+                        fontWeight = FontWeight.SemiBold,
+                        fontSize = 16.sp,
+                        color = StudioColors.TextPrimary
+                    )
+                }
+
+                // Live Firebase AI Logic connection indicator
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(6.dp))
+                        .background(StudioColors.Emerald.copy(alpha = 0.14f))
+                        .border(1.dp, StudioColors.EmeraldBright.copy(alpha = 0.4f), RoundedCornerShape(6.dp))
+                        .padding(horizontal = 8.dp, vertical = 3.dp)
+                        .testTag("lyrics_api_status_badge")
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(7.dp)
+                            .clip(CircleShape)
+                            .background(StudioColors.EmeraldBright)
+                    )
+                    Text(
+                        text = "${strings.lyricsApiConnectedBadge} · Gemini 3.8",
+                        fontFamily = StudioMonoFontFamily,
+                        fontSize = 11.sp,
+                        color = StudioColors.EmeraldBright
+                    )
+                }
             }
 
             if (lyricsDraft.isNotEmpty() || aiState !is LyricsAiState.Idle) {
@@ -212,6 +250,40 @@ fun LyricsCorrectorPanel(
                 .heightIn(min = 120.dp)
                 .testTag("lyrics_input")
         )
+
+        // Auto-apply toggle row
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(8.dp))
+                .background(StudioColors.Background)
+                .border(1.dp, StudioColors.Border, RoundedCornerShape(8.dp))
+                .padding(horizontal = 12.dp, vertical = 4.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = strings.lyricsAutoApplyLabel,
+                fontFamily = StudioSansFontFamily,
+                fontSize = 12.sp,
+                color = StudioColors.TextBody,
+                modifier = Modifier.weight(1f)
+            )
+            Switch(
+                checked = autoApplyEnabled,
+                onCheckedChange = { onToggleAutoApply() },
+                enabled = !isLoading,
+                colors = SwitchDefaults.colors(
+                    checkedThumbColor = Color(0xFF020617),
+                    checkedTrackColor = StudioColors.Amber,
+                    uncheckedThumbColor = StudioColors.TextSecondary,
+                    uncheckedTrackColor = StudioColors.SlateButton
+                ),
+                modifier = Modifier
+                    .minimumInteractiveComponentSize()
+                    .testTag("lyrics_auto_apply_toggle")
+            )
+        }
 
         // Action Buttons
         FlowRow(
@@ -374,31 +446,63 @@ fun LyricsCorrectorPanel(
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    Button(
-                        onClick = onApplyCorrectedClick,
-                        shape = RoundedCornerShape(8.dp),
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = StudioColors.Emerald,
-                            contentColor = Color.White
-                        ),
-                        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp),
-                        modifier = Modifier
-                            .minimumInteractiveComponentSize()
-                            .testTag("lyrics_apply_button")
-                    ) {
-                        Icon(
-                            imageVector = Icons.Filled.Check,
-                            contentDescription = strings.lyricsApplyBtn,
+                    if (lyricsDraft != res.correctedLyrics) {
+                        Button(
+                            onClick = onApplyCorrectedClick,
+                            shape = RoundedCornerShape(8.dp),
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = StudioColors.Emerald,
+                                contentColor = Color.White
+                            ),
+                            contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp),
                             modifier = Modifier
-                                .padding(end = 6.dp)
-                                .size(15.dp)
-                        )
-                        Text(
-                            text = strings.lyricsApplyBtn,
-                            fontFamily = StudioSansFontFamily,
-                            fontWeight = FontWeight.SemiBold,
-                            fontSize = 12.sp
-                        )
+                                .minimumInteractiveComponentSize()
+                                .testTag("lyrics_apply_button")
+                        ) {
+                            Icon(
+                                imageVector = Icons.Filled.Check,
+                                contentDescription = strings.lyricsApplyBtn,
+                                modifier = Modifier
+                                    .padding(end = 6.dp)
+                                    .size(15.dp)
+                            )
+                            Text(
+                                text = strings.lyricsApplyBtn,
+                                fontFamily = StudioSansFontFamily,
+                                fontWeight = FontWeight.SemiBold,
+                                fontSize = 12.sp
+                            )
+                        }
+                    }
+
+                    if (canRestoreOriginal) {
+                        OutlinedButton(
+                            onClick = onRestoreOriginalClick,
+                            shape = RoundedCornerShape(8.dp),
+                            border = BorderStroke(1.dp, StudioColors.BorderSubtle),
+                            colors = ButtonDefaults.outlinedButtonColors(
+                                containerColor = StudioColors.SlateButton,
+                                contentColor = StudioColors.TextPrimary
+                            ),
+                            contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp),
+                            modifier = Modifier
+                                .minimumInteractiveComponentSize()
+                                .testTag("lyrics_restore_button")
+                        ) {
+                            Icon(
+                                imageVector = Icons.Filled.History,
+                                contentDescription = strings.lyricsRestoreOriginalBtn,
+                                modifier = Modifier
+                                    .padding(end = 6.dp)
+                                    .size(15.dp)
+                            )
+                            Text(
+                                text = strings.lyricsRestoreOriginalBtn,
+                                fontFamily = StudioSansFontFamily,
+                                fontWeight = FontWeight.Medium,
+                                fontSize = 12.sp
+                            )
+                        }
                     }
 
                     OutlinedButton(

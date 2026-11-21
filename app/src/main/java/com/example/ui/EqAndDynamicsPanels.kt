@@ -127,6 +127,10 @@ fun StudioSliderRow(
 fun ParametricEqPanel(
     strings: StudioStrings,
     params: MasteringParams,
+    eqCurveDb: List<Float>,
+    bandTelemetry: List<com.example.audio.BandTelemetry>,
+    isBypassed: Boolean,
+    isPlaying: Boolean,
     onUpdateParams: ((MasteringParams) -> MasteringParams) -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -148,9 +152,18 @@ fun ParametricEqPanel(
         )
         HorizontalDivider(color = StudioColors.Border)
 
+        EqFrequencyOverlay(
+            params = params,
+            eqCurveDb = eqCurveDb,
+            bandTelemetry = bandTelemetry,
+            isBypassed = isBypassed,
+            isPlaying = isPlaying,
+            onUpdateParams = onUpdateParams
+        )
+
         StudioSliderRow(
             label = strings.hpfLabel,
-            valueText = "${params.hpf.roundToInt()} Hz",
+            valueText = formatBandValueWithGr("${params.hpf.roundToInt()} Hz", bandTelemetry.getOrNull(0), isBypassed),
             value = params.hpf,
             valueRange = 20f..90f,
             step = 2f,
@@ -160,7 +173,7 @@ fun ParametricEqPanel(
 
         StudioSliderRow(
             label = strings.lowLabel,
-            valueText = formatSignedDb(params.low),
+            valueText = formatBandValueWithGr(formatSignedDb(params.low), bandTelemetry.getOrNull(1), isBypassed),
             value = params.low,
             valueRange = -6f..6f,
             step = 0.2f,
@@ -170,7 +183,7 @@ fun ParametricEqPanel(
 
         StudioSliderRow(
             label = strings.mudLabel,
-            valueText = formatSignedDb(params.mud),
+            valueText = formatBandValueWithGr(formatSignedDb(params.mud), bandTelemetry.getOrNull(2), isBypassed),
             value = params.mud,
             valueRange = -6f..4f,
             step = 0.2f,
@@ -180,7 +193,7 @@ fun ParametricEqPanel(
 
         StudioSliderRow(
             label = strings.presLabel,
-            valueText = formatSignedDb(params.pres),
+            valueText = formatBandValueWithGr(formatSignedDb(params.pres), bandTelemetry.getOrNull(3), isBypassed),
             value = params.pres,
             valueRange = -4f..6f,
             step = 0.2f,
@@ -190,7 +203,7 @@ fun ParametricEqPanel(
 
         StudioSliderRow(
             label = strings.deessLabel,
-            valueText = formatSignedDb(params.deess),
+            valueText = formatBandValueWithGr(formatSignedDb(params.deess), bandTelemetry.getOrNull(4), isBypassed),
             value = params.deess,
             valueRange = -6f..3f,
             step = 0.2f,
@@ -200,7 +213,7 @@ fun ParametricEqPanel(
 
         StudioSliderRow(
             label = strings.airLabel,
-            valueText = formatSignedDb(params.air),
+            valueText = formatBandValueWithGr(formatSignedDb(params.air), bandTelemetry.getOrNull(5), isBypassed),
             value = params.air,
             valueRange = -4f..6f,
             step = 0.2f,
@@ -403,4 +416,15 @@ private fun formatSignedDb(value: Float): String {
     val clean = if (value > -0.05f && value < 0.05f) 0.0f else value
     val sign = if (clean >= 0f) "+" else ""
     return String.format("%s%.1f dB", sign, clean)
+}
+
+private fun formatBandValueWithGr(
+    baseText: String,
+    telemetry: com.example.audio.BandTelemetry?,
+    isBypassed: Boolean
+): String {
+    if (telemetry == null || isBypassed || telemetry.totalGrDb > -0.15f) {
+        return baseText
+    }
+    return String.format("%s  (GR %.1f dB)", baseText, telemetry.totalGrDb)
 }

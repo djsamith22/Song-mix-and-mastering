@@ -136,4 +136,25 @@ class BiquadFilter(
         y1R = y0
         return y0
     }
+
+    /**
+     * Evaluates the exact filter magnitude response in dB at [freqHz].
+     */
+    fun magnitudeDbAt(freqHz: Double): Double {
+        val w = 2.0 * PI * freqHz.coerceIn(10.0, sampleRate * 0.49) / sampleRate
+        val cosW = cos(w)
+        val sinW = sin(w)
+        val cos2W = cos(2.0 * w)
+        val sin2W = sin(2.0 * w)
+
+        val numRe = b0 + b1 * cosW + b2 * cos2W
+        val numIm = -b1 * sinW - b2 * sin2W
+        val denRe = 1.0 + a1 * cosW + a2 * cos2W
+        val denIm = -a1 * sinW - a2 * sin2W
+
+        val numSq = numRe * numRe + numIm * numIm
+        val denSq = (denRe * denRe + denIm * denIm).coerceAtLeast(1e-18)
+        val magSq = (numSq / denSq).coerceAtLeast(1e-12)
+        return 10.0 * kotlin.math.log10(magSq)
+    }
 }

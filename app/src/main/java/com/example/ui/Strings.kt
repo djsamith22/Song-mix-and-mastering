@@ -58,7 +58,10 @@ data class StudioStrings(
     val lyricsCorrectedLabel: String,
     val lyricsFixesAppliedLabel: String,
     val lyricsNoChangesNeeded: String,
-    val lyricsClearBtn: String
+    val lyricsClearBtn: String,
+    val lyricsApiConnectedBadge: String,
+    val lyricsAutoApplyLabel: String,
+    val lyricsRestoreOriginalBtn: String
 )
 
 fun studioStrings(lang: AppLanguage): StudioStrings = when (lang) {
@@ -115,7 +118,10 @@ fun studioStrings(lang: AppLanguage): StudioStrings = when (lang) {
         lyricsCorrectedLabel = "නිවැරදි කළ Lyrics",
         lyricsFixesAppliedLabel = "සිදු කළ නිවැරදි කිරීම්",
         lyricsNoChangesNeeded = "Lyrics දැනටමත් නිවැරදි මට්ටමක පවතී.",
-        lyricsClearBtn = "Clear"
+        lyricsClearBtn = "Clear",
+        lyricsApiConnectedBadge = "Gemini AI API සම්බන්ධයි",
+        lyricsAutoApplyLabel = "නිවැරදි කළ වහාම Editor වෙත යොදන්න",
+        lyricsRestoreOriginalBtn = "මුල් පදවැල ගන්න"
     )
 
     AppLanguage.EN -> StudioStrings(
@@ -171,7 +177,10 @@ fun studioStrings(lang: AppLanguage): StudioStrings = when (lang) {
         lyricsCorrectedLabel = "Corrected Lyrics",
         lyricsFixesAppliedLabel = "Corrections Applied",
         lyricsNoChangesNeeded = "Lyrics already look clean and well-formatted.",
-        lyricsClearBtn = "Clear"
+        lyricsClearBtn = "Clear",
+        lyricsApiConnectedBadge = "Gemini AI API Connected",
+        lyricsAutoApplyLabel = "Auto-apply to editor",
+        lyricsRestoreOriginalBtn = "Restore Original"
     )
 }
 

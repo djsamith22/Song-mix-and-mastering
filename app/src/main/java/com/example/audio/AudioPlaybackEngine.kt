@@ -54,20 +54,27 @@ class AudioPlaybackEngine {
             isPlaying = false,
             currentSec = 0.0,
             spectrumBins = List(40) { 0f },
-            gainReductionDb = 0f
+            gainReductionDb = 0f,
+            bandTelemetry = dspChain?.currentBandTelemetry(isBypassed = isBypassed, isPlaying = false).orEmpty()
         )
     }
 
     fun updateParams(newParams: MasteringParams) {
         params = newParams
         dspChain?.updateParams(newParams)
+        if (!_snapshot.value.isPlaying) {
+            _snapshot.value = _snapshot.value.copy(
+                bandTelemetry = dspChain?.currentBandTelemetry(isBypassed = isBypassed, isPlaying = false).orEmpty()
+            )
+        }
     }
 
     fun setBypassed(bypassed: Boolean) {
         isBypassed = bypassed
         if (!_snapshot.value.isPlaying) {
             _snapshot.value = _snapshot.value.copy(
-                gainReductionDb = 0f
+                gainReductionDb = 0f,
+                bandTelemetry = dspChain?.currentBandTelemetry(isBypassed = bypassed, isPlaying = false).orEmpty()
             )
         }
     }
@@ -88,13 +95,14 @@ class AudioPlaybackEngine {
             isPlaying = false,
             currentSec = sec,
             spectrumBins = List(40) { 0f },
-            gainReductionDb = 0f
+            gainReductionDb = 0f,
+            bandTelemetry = dspChain?.currentBandTelemetry(isBypassed = isBypassed, isPlaying = false).orEmpty()
         )
     }
 
     fun seekToSec(sec: Double) {
         val audio = currentAudio ?: return
-        val clampedSec = sec.coerceIn(0.0, audio.durationSec)
+        val clampedSec = sec.coerceAtLeast(0.0).coerceAtMost(audio.durationSec)
         val targetFrame = (clampedSec * audio.sampleRate).toInt().coerceIn(0, audio.totalFrames)
         pauseFrame = targetFrame
         if (_snapshot.value.isPlaying) {
@@ -184,11 +192,13 @@ class AudioPlaybackEngine {
 
                     val bins = fftAnalyzer.computeSpectrumBins(outBlock, framesNow, ch)
                     val gr = if (isBypassed) 0f else chain.lastGainReductionDb
+                    val telemetry = chain.currentBandTelemetry(isBypassed = isBypassed, isPlaying = true)
                     _snapshot.value = PlaybackSnapshot(
                         isPlaying = true,
                         currentSec = frameCursor.toDouble() / audio.sampleRate,
                         spectrumBins = bins,
-                        gainReductionDb = gr
+                        gainReductionDb = gr,
+                        bandTelemetry = telemetry
                     )
                 }
 
@@ -200,7 +210,8 @@ class AudioPlaybackEngine {
                         isPlaying = false,
                         currentSec = 0.0,
                         spectrumBins = List(40) { 0f },
-                        gainReductionDb = 0f
+                        gainReductionDb = 0f,
+                        bandTelemetry = chain.currentBandTelemetry(isBypassed = isBypassed, isPlaying = false)
                     )
                 }
             } finally {

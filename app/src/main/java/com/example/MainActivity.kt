@@ -60,9 +60,11 @@ class MainActivity : ComponentActivity() {
                     onLyricsChange = vm::updateLyricsDraft,
                     onClearLyrics = vm::clearLyrics,
                     onSelectLyricMode = vm::selectLyricMode,
+                    onToggleAutoApplyLyrics = vm::toggleAutoApplyLyrics,
                     onAutoCorrectLyrics = vm::autoCorrectLyrics,
                     onExtractLyricsFromAudio = vm::transcribeAndCorrectFromAudio,
                     onApplyCorrectedLyrics = vm::applyCorrectedLyrics,
+                    onRestoreOriginalLyrics = vm::restoreOriginalLyrics,
                     onLyricsCopied = vm::showLyricsCopiedBanner
                 )
             }
