@@ -72,7 +72,13 @@ data class StudioStrings(
     val deepBassBtn: String,
     val vocalBoostBtn: String,
     val brightTrebleBtn: String,
-    val autoFitAppliedBanner: String
+    val autoFitAppliedBanner: String,
+    // Export Rename Dialog
+    val exportDialogTitle: String,
+    val exportFileNameLabel: String,
+    val exportFileNameHint: String,
+    val exportConfirmBtn: String,
+    val cancelBtn: String
 )
 
 fun studioStrings(lang: AppLanguage): StudioStrings = when (lang) {
@@ -142,7 +148,12 @@ fun studioStrings(lang: AppLanguage): StudioStrings = when (lang) {
         deepBassBtn = "Bass වැඩි",
         vocalBoostBtn = "Vocal පැහැදිලි",
         brightTrebleBtn = "Treble වැඩි",
-        autoFitAppliedBanner = "ගීතයේ ශබ්ද රටාවට ගැලපෙන Bass, Vocal සහ Treble ස්වයංක්‍රීයව සකස් කරන ලදී."
+        autoFitAppliedBanner = "ගීතයේ ශබ්ද රටාවට ගැලපෙන Bass, Vocal සහ Treble ස්වයංක්‍රීයව සකස් කරන ලදී.",
+        exportDialogTitle = "ගීතය Rename කර Save කරන්න",
+        exportFileNameLabel = "ගීතයේ නම (File Name)",
+        exportFileNameHint = "උදා: mage_song_master",
+        exportConfirmBtn = "Save WAV",
+        cancelBtn = "අවලංගු කරන්න"
     )
 
     AppLanguage.EN -> StudioStrings(
@@ -211,7 +222,12 @@ fun studioStrings(lang: AppLanguage): StudioStrings = when (lang) {
         deepBassBtn = "Deep Bass",
         vocalBoostBtn = "Vocal Boost",
         brightTrebleBtn = "Bright Treble",
-        autoFitAppliedBanner = "Auto-tuned Bass, Vocal, Treble, and Dynamics to match this song."
+        autoFitAppliedBanner = "Auto-tuned Bass, Vocal, Treble, and Dynamics to match this song.",
+        exportDialogTitle = "Rename & Export WAV",
+        exportFileNameLabel = "Song File Name",
+        exportFileNameHint = "e.g. my_song_master",
+        exportConfirmBtn = "Save WAV",
+        cancelBtn = "Cancel"
     )
 }
 

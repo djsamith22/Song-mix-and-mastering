@@ -54,8 +54,11 @@ class MainActivity : ComponentActivity() {
                     onSelectPreset = vm::selectPreset,
                     onAutoFitSong = vm::applySongAutoMatch,
                     onUpdateParams = vm::updateParams,
-                    onExportWavClick = {
-                        createWavLauncher.launch(vm.suggestedExportFileName())
+                    suggestedExportBaseName = vm.suggestedExportBaseName(),
+                    onExportWavWithName = { rawName ->
+                        val sanitized = vm.sanitizeWavFileName(rawName)
+                        vm.setPendingExportFileName(sanitized)
+                        createWavLauncher.launch(sanitized)
                     },
                     onDismissBanner = vm::dismissBanner,
                     onLyricsChange = vm::updateLyricsDraft,

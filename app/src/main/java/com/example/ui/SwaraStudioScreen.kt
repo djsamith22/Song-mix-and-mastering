@@ -44,6 +44,10 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.minimumInteractiveComponentSize
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -79,7 +83,8 @@ fun SwaraStudioScreen(
     onSelectPreset: (MasteringPreset) -> Unit,
     onAutoFitSong: () -> Unit,
     onUpdateParams: ((MasteringParams) -> MasteringParams) -> Unit,
-    onExportWavClick: () -> Unit,
+    suggestedExportBaseName: String,
+    onExportWavWithName: (String) -> Unit,
     onDismissBanner: () -> Unit,
     onLyricsChange: (String) -> Unit,
     onClearLyrics: () -> Unit,
@@ -92,6 +97,19 @@ fun SwaraStudioScreen(
     onLyricsCopied: () -> Unit
 ) {
     val strings = studioStrings(state.language)
+    var showExportRenameDialog by remember { mutableStateOf(false) }
+
+    if (showExportRenameDialog) {
+        ExportRenameDialog(
+            strings = strings,
+            initialBaseName = suggestedExportBaseName,
+            onDismiss = { showExportRenameDialog = false },
+            onConfirm = { typedName ->
+                showExportRenameDialog = false
+                onExportWavWithName(typedName)
+            }
+        )
+    }
 
     Scaffold(
         containerColor = StudioColors.Background,
@@ -179,7 +197,7 @@ fun SwaraStudioScreen(
                         state = state,
                         onTogglePlayPause = onTogglePlayPause,
                         onSelectBypass = onSelectBypass,
-                        onExportWavClick = onExportWavClick
+                        onExportWavClick = { showExportRenameDialog = true }
                     )
 
                     // Upload Prompt Banner (shown until audio is loaded)

@@ -302,6 +302,31 @@
     </section>
   </main>
 
+  <!-- Export Rename Modal -->
+  <div id="exportRenameModal" class="hidden fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="w-full max-w-md bg-[#111722] border border-slate-700 rounded-xl p-5 space-y-4 shadow-2xl">
+      <div class="flex items-center justify-between">
+        <h3 id="exportModalTitle" class="text-base font-semibold text-slate-100">ගීතය Rename කර Download කරන්න</h3>
+        <button id="exportModalClose" type="button" class="text-slate-400 hover:text-white text-sm px-2 py-1">✕</button>
+      </div>
+      <div class="space-y-1.5">
+        <label id="exportModalLabel" for="exportNameInput" class="block text-xs text-slate-400">ගීතයේ නම (File Name)</label>
+        <div class="flex items-center bg-[#0B0F17] border border-slate-700 focus-within:border-amber-500 rounded-lg px-3 py-2">
+          <input id="exportNameInput" type="text" placeholder="my_song_fixed" class="flex-1 bg-transparent text-sm text-slate-100 focus:outline-none" />
+          <span class="font-mono text-xs text-amber-400 ml-2">.wav</span>
+        </div>
+      </div>
+      <div class="flex justify-end gap-2 pt-1">
+        <button id="exportCancelBtn" type="button" class="px-3.5 py-2 rounded-lg text-xs font-medium bg-slate-900 border border-slate-700 text-slate-300 hover:text-white">
+          අවලංගු කරන්න
+        </button>
+        <button id="exportConfirmBtn" type="button" class="px-4 py-2 rounded-lg text-xs font-semibold bg-emerald-600 hover:bg-emerald-500 text-white">
+          Download WAV
+        </button>
+      </div>
+    </div>
+  </div>
+
   <script>
     const PRESETS = [
       { id: 'rec', name: 'Recommended Fix', p: { hpf: 34, low: -1.0, lowFreq: 90, mud: -2.6, mudFreq: 250, pres: 2.8, presFreq: 3200, deess: -2.4, deessFreq: 6800, air: 1.8, airFreq: 11000, thresh: -15, ratio: 2.8, width: 1.08, gain: 1.5 } },
@@ -1088,31 +1113,91 @@
       if (isPlaying) playAt(sec); else drawWave();
     };
 
-    el('exportBtn').onclick = async () => {
+    function getSuggestedExportBaseName() {
+      const base = (currentTrackFileName || 'swara_studio')
+        .replace(/\.[^.]+$/, '')
+        .replace(/[\\/:*?"<>|]/g, '_')
+        .trim();
+      return `${base || 'swara_studio'}_fixed`;
+    }
+
+    function sanitizeWavName(raw) {
+      const cleaned = String(raw || '')
+        .replace(/[\\/:*?"<>|]/g, '_')
+        .trim()
+        .replace(/\.wav$/i, '')
+        .trim();
+      return `${cleaned || getSuggestedExportBaseName()}.wav`;
+    }
+
+    async function renderAndDownloadWav(fileName) {
       if (!audioBuffer) return;
+      el('exportBtn').disabled = true;
       el('exportBtn').textContent = 'Rendering...';
-      const off = new OfflineAudioContext(audioBuffer.numberOfChannels, audioBuffer.length, audioBuffer.sampleRate);
-      const src = off.createBufferSource(); src.buffer = audioBuffer;
-      if (isBypassed) src.connect(off.destination);
-      else { const c = buildChain(off, params, audioBuffer.numberOfChannels); src.connect(c.input); c.output.connect(off.destination); }
-      src.start(0);
-      const rendered = await off.startRendering();
-      const nc = rendered.numberOfChannels, len = rendered.length, buf = new ArrayBuffer(44 + len * nc * 2), v = new DataView(buf);
-      const ws = (o, s) => { for (let i = 0; i < s.length; i++) v.setUint8(o + i, s.charCodeAt(i)); };
-      ws(0, 'RIFF'); v.setUint32(4, 36 + len * nc * 2, true); ws(8, 'WAVE'); ws(12, 'fmt ');
-      v.setUint32(16, 16, true); v.setUint16(20, 1, true); v.setUint16(22, nc, true);
-      v.setUint32(24, rendered.sampleRate, true); v.setUint32(28, rendered.sampleRate * nc * 2, true);
-      v.setUint16(32, nc * 2, true); v.setUint16(34, 16, true); ws(36, 'data'); v.setUint32(40, len * nc * 2, true);
-      let pos = 44;
-      for (let i = 0; i < len; i++) for (let ch = 0; ch < nc; ch++) {
-        const s = Math.max(-1, Math.min(1, rendered.getChannelData(ch)[i]));
-        v.setInt16(pos, s < 0 ? s * 0x8000 : s * 0x7fff, true); pos += 2;
+      try {
+        const off = new OfflineAudioContext(audioBuffer.numberOfChannels, audioBuffer.length, audioBuffer.sampleRate);
+        const src = off.createBufferSource(); src.buffer = audioBuffer;
+        if (isBypassed) src.connect(off.destination);
+        else { const c = buildChain(off, params, audioBuffer.numberOfChannels); src.connect(c.input); c.output.connect(off.destination); }
+        src.start(0);
+        const rendered = await off.startRendering();
+        const nc = rendered.numberOfChannels, len = rendered.length, buf = new ArrayBuffer(44 + len * nc * 2), v = new DataView(buf);
+        const ws = (o, s) => { for (let i = 0; i < s.length; i++) v.setUint8(o + i, s.charCodeAt(i)); };
+        ws(0, 'RIFF'); v.setUint32(4, 36 + len * nc * 2, true); ws(8, 'WAVE'); ws(12, 'fmt ');
+        v.setUint32(16, 16, true); v.setUint16(20, 1, true); v.setUint16(22, nc, true);
+        v.setUint32(24, rendered.sampleRate, true); v.setUint32(28, rendered.sampleRate * nc * 2, true);
+        v.setUint16(32, nc * 2, true); v.setUint16(34, 16, true); ws(36, 'data'); v.setUint32(40, len * nc * 2, true);
+        let pos = 44;
+        for (let i = 0; i < len; i++) for (let ch = 0; ch < nc; ch++) {
+          const s = Math.max(-1, Math.min(1, rendered.getChannelData(ch)[i]));
+          v.setInt16(pos, s < 0 ? s * 0x8000 : s * 0x7fff, true); pos += 2;
+        }
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(new Blob([buf], { type: 'audio/wav' }));
+        a.download = fileName;
+        a.click();
+      } finally {
+        el('exportBtn').disabled = false;
+        el('exportBtn').textContent = lang === 'si' ? 'හැදූ WAV ගන්න' : 'Export Fixed WAV';
       }
-      const a = document.createElement('a');
-      a.href = URL.createObjectURL(new Blob([buf], { type: 'audio/wav' }));
-      a.download = 'swara_studio_fixed.wav'; a.click();
-      el('exportBtn').textContent = lang === 'si' ? 'හැදූ WAV ගන්න' : 'Export Fixed WAV';
+    }
+
+    function closeExportModal() {
+      el('exportRenameModal')?.classList.add('hidden');
+    }
+
+    el('exportBtn').onclick = () => {
+      if (!audioBuffer) return;
+      const modal = el('exportRenameModal');
+      const inp = el('exportNameInput');
+      if (!modal || !inp) {
+        renderAndDownloadWav(`${getSuggestedExportBaseName()}.wav`);
+        return;
+      }
+      inp.value = getSuggestedExportBaseName();
+      modal.classList.remove('hidden');
+      inp.focus();
+      inp.select();
     };
+
+    el('exportModalClose')?.addEventListener('click', closeExportModal);
+    el('exportCancelBtn')?.addEventListener('click', closeExportModal);
+    el('exportRenameModal')?.addEventListener('click', (e) => {
+      if (e.target === el('exportRenameModal')) closeExportModal();
+    });
+    el('exportConfirmBtn')?.addEventListener('click', () => {
+      const targetName = sanitizeWavName(el('exportNameInput')?.value);
+      closeExportModal();
+      renderAndDownloadWav(targetName);
+    });
+    el('exportNameInput')?.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        el('exportConfirmBtn')?.click();
+      } else if (e.key === 'Escape') {
+        closeExportModal();
+      }
+    });
 
     function updateGeminiBadge() {
       const key = (el('geminiKeyInput').value || localStorage.getItem('swara_gemini_key') || '').trim();
@@ -1270,6 +1355,9 @@
       el('applyLyricsBtn').textContent = lang === 'si' ? 'Editor වෙත යොදන්න' : 'Apply to Editor';
       el('lyricsFixesHeader').textContent = lang === 'si' ? 'සිදු කළ නිවැරදි කිරීම්' : 'Corrections Applied';
       if (el('autoApplyLabel')) el('autoApplyLabel').textContent = lang === 'si' ? 'නිවැරදි කළ වහාම Editor වෙත යොදන්න' : 'Auto-apply to editor';
+      if (el('exportModalTitle')) el('exportModalTitle').textContent = lang === 'si' ? 'ගීතය Rename කර Download කරන්න' : 'Rename & Download WAV';
+      if (el('exportModalLabel')) el('exportModalLabel').textContent = lang === 'si' ? 'ගීතයේ නම (File Name)' : 'Song File Name';
+      if (el('exportCancelBtn')) el('exportCancelBtn').textContent = lang === 'si' ? 'අවලංගු කරන්න' : 'Cancel';
       updateGeminiBadge();
       renderLyricModes();
     };

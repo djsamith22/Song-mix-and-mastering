@@ -393,19 +393,40 @@ class SwaraViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-    fun suggestedExportFileName(): String {
-        val base = _uiState.value.trackName
+    private var pendingExportFileName: String? = null
+
+    fun suggestedExportBaseName(): String {
+        val raw = _uiState.value.trackName
             ?.substringBeforeLast('.')
-            ?.replace(Regex("[^a-zA-Z0-9_-]"), "_")
+            ?.replace(Regex("[\\\\/:*?\"<>|]"), "_")
+            ?.trim()
             ?.takeIf { it.isNotBlank() }
             ?: "swara_studio"
-        return "${base}_fixed.wav"
+        return "${raw}_fixed"
     }
+
+    fun sanitizeWavFileName(inputName: String): String {
+        val cleaned = inputName
+            .replace(Regex("[\\\\/:*?\"<>|]"), "_")
+            .trim()
+            .removeSuffix(".wav")
+            .removeSuffix(".WAV")
+            .trim()
+            .ifBlank { suggestedExportBaseName() }
+        return "$cleaned.wav"
+    }
+
+    fun setPendingExportFileName(fileName: String) {
+        pendingExportFileName = sanitizeWavFileName(fileName)
+    }
+
+    fun suggestedExportFileName(): String = "${suggestedExportBaseName()}.wav"
 
     fun exportWavToUri(uri: Uri) {
         val audio = loadedAudio ?: return
         val stateSnapshot = _uiState.value
         val context = getApplication<Application>()
+        val exportedName = pendingExportFileName ?: suggestedExportFileName()
 
         viewModelScope.launch {
             _uiState.update {
@@ -423,7 +444,7 @@ class SwaraViewModel(application: Application) : AndroidViewModel(application) {
                 _uiState.update {
                     it.copy(
                         isExporting = false,
-                        bannerMessage = strings.exportSuccess,
+                        bannerMessage = "${strings.exportSuccess} ($exportedName)",
                         isBannerError = false
                     )
                 }
